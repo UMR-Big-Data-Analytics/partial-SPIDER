@@ -4,6 +4,8 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.io.IOException;
+import java.util.Set;
+
 import lombok.Data;
 
 @Data
@@ -16,6 +18,8 @@ class Attribute {
     private final IntSet referenced;
     private final IntSet dependent;
     private final ReadPointer readPointer;
+    private String currentValue;
+    private Long currentOccurrences;
 
     public Attribute(final int id, final String tableName, final String columnName,
                      final ReadPointer readPointer) {
@@ -26,6 +30,8 @@ class Attribute {
         this.columnName = columnName;
         dependent = new IntLinkedOpenHashSet();
         referenced = new IntLinkedOpenHashSet();
+        this.currentValue = readPointer.getCurrentValue();
+        this.currentOccurrences = Long.parseLong(readPointer.next());
     }
 
     public void addDependent(final IntSet dependent) {
@@ -45,16 +51,21 @@ class Attribute {
     }
 
     public String getCurrentValue() {
-        return readPointer.getCurrentValue();
+        return currentValue;
     }
 
-    public void nextValue() {
+    public boolean nextValue() {
         if (readPointer.hasNext()) {
-            readPointer.next();
+            this.currentValue = readPointer.next();
+            if (readPointer.hasNext()) {
+                this.currentOccurrences = Long.valueOf(readPointer.next());
+                return true;
+            }
         }
+        return false;
     }
 
-    public void intersectReferenced(final IntSet attributes, final Attribute[] attributeIndex) {
+    public void intersectReferenced(Set<Integer> attributes, final Attribute[] attributeIndex) {
         final IntIterator referencedIterator = referenced.iterator();
         while (referencedIterator.hasNext()) {
             final int ref = referencedIterator.nextInt();
@@ -68,7 +79,7 @@ class Attribute {
     }
 
     public boolean isFinished() {
-        return !readPointer.hasNext() || (referenced.isEmpty() && dependent.isEmpty());
+        return referenced.isEmpty() && dependent.isEmpty();
     }
 
     public void close() throws IOException {

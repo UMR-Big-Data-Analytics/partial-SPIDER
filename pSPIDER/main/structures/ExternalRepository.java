@@ -1,7 +1,6 @@
 package structures;
 
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
-import de.metanome.algorithm_integration.algorithm_execution.FileCreationException;
 import de.metanome.algorithm_integration.input.InputIterationException;
 import de.metanome.algorithm_integration.input.RelationalInput;
 import de.metanome.algorithm_integration.input.RelationalInputGenerator;
@@ -47,18 +46,18 @@ public class ExternalRepository {
 
         final Path[] paths = new Path[table.getColumnCount()];
         final BufferedWriter[] writers = new BufferedWriter[table.getColumnCount()];
-        openForWriting(configuration, paths, writers);
+        openForWriting(paths, writers);
         write(table.selectInputGenerator(), writers);
         close(writers);
         return paths;
     }
 
-    private void openForWriting(final SpiderConfiguration configuration, final Path[] paths,
+    private void openForWriting(final Path[] paths,
                                 final BufferedWriter[] writers) throws AlgorithmExecutionException {
 
         try {
             for (int index = 0; index < paths.length; ++index) {
-                final Path path = getPath(configuration);
+                final Path path = getPath();
                 paths[index] = path;
                 writers[index] = Files.newBufferedWriter(path);
             }
@@ -121,11 +120,9 @@ public class ExternalRepository {
         return value.replace('\n', '\0');
     }
 
-    private Path getPath(final SpiderConfiguration configuration)
-            throws FileCreationException, IOException {
+    private Path getPath() throws IOException {
         this.count++;
-        File tempFile = new File(".\\temp\\temp_" + count + "txt");
+        File tempFile = new File(".\\temp\\temp_" + count + ".txt");
         return tempFile.toPath();
-        //return configuration.getTempFileGenerator().getTemporaryFile().toPath();
     }
 }

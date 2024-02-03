@@ -8,10 +8,12 @@ import lombok.Setter;
 class TPMMSTuple implements Comparable<TPMMSTuple> {
 
     private String value;
+    private long occurrence;
     private final int readerNumber;
 
-    TPMMSTuple(final String value, final int readerNumber) {
+    TPMMSTuple(final String value, long occurrence, final int readerNumber) {
         this.value = value;
+        this.occurrence = occurrence;
         this.readerNumber = readerNumber;
     }
 
@@ -27,10 +29,9 @@ class TPMMSTuple implements Comparable<TPMMSTuple> {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof TPMMSTuple)) {
+        if (!(obj instanceof TPMMSTuple other)) {
             return false;
         }
-        TPMMSTuple other = (TPMMSTuple) obj;
         return this.value.equals(other.value);
     }
 

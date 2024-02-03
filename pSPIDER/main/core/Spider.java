@@ -19,7 +19,9 @@ import structures.ReadPointer;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class Spider {
@@ -133,23 +135,23 @@ public class Spider {
     }
 
     private void calculateInclusionDependencies() {
-        final IntSet topAttributes = new IntOpenHashSet();
+        Map<Integer, Long> topAttributes = new HashMap<>();
         while (!priorityQueue.isEmpty()) {
 
             final Attribute firstAttribute = priorityQueue.dequeue();
-            topAttributes.add(firstAttribute.getId());
+            topAttributes.put(firstAttribute.getId(), firstAttribute.getCurrentOccurrences());
             while (!priorityQueue.isEmpty() && sameValue(priorityQueue.first(), firstAttribute)) {
-                topAttributes.add(priorityQueue.dequeue().getId());
+                Attribute sameGroupAttribute = priorityQueue.dequeue();
+                topAttributes.put(sameGroupAttribute.getId(), sameGroupAttribute.getCurrentOccurrences());
             }
 
-            for (final int topAttribute : topAttributes) {
-                attributeIndex[topAttribute].intersectReferenced(topAttributes, attributeIndex);
+            for (int topAttribute : topAttributes.keySet()) {
+                attributeIndex[topAttribute].intersectReferenced(topAttributes.keySet(), attributeIndex);
             }
 
-            for (final int topAttribute : topAttributes) {
+            for (int topAttribute : topAttributes.keySet()) {
                 final Attribute attribute = attributeIndex[topAttribute];
-                attribute.nextValue();
-                if (!attribute.isFinished()) {
+                if (attribute.nextValue() && !attribute.isFinished()) {
                     priorityQueue.enqueue(attribute);
                 }
             }

@@ -1,7 +1,6 @@
 package structures;
 
 import de.metanome.util.TPMMSConfiguration;
-import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 
 import java.beans.ConstructorProperties;
 import java.io.BufferedReader;
@@ -52,13 +51,14 @@ public class TPMMS {
         }
 
         public void close() throws IOException {
+            this.writer.flush();
             this.writer.close();
         }
     }
 
     private static class Merger {
         private final TPMMS.Output output;
-        private ObjectHeapPriorityQueue<TPMMSTuple> values;
+        private PriorityQueue<TPMMSTuple> topFileValues;
         private BufferedReader[] readers;
 
         @ConstructorProperties({"output"})
@@ -67,7 +67,7 @@ public class TPMMS {
         }
 
         private void init(List<Path> files) throws IOException {
-            this.values = new ObjectHeapPriorityQueue<>(files.size());
+            this.topFileValues = new PriorityQueue<>(files.size());
             this.readers = new BufferedReader[files.size()];
 
             for (int index = 0; index < files.size(); ++index) {
@@ -75,7 +75,8 @@ public class TPMMS {
                 this.readers[index] = reader;
                 String firstLine = reader.readLine();
                 if (firstLine != null) {
-                    this.values.enqueue(new TPMMSTuple(firstLine, index));
+                    long occurrence = Long.parseLong(reader.readLine());
+                    this.topFileValues.add(new TPMMSTuple(firstLine, occurrence, index));
                 }
             }
 
@@ -85,26 +86,29 @@ public class TPMMS {
             this.init(files);
             this.output.open(to);
 
-            try {
-                String previousValue = null;
+            String previousValue = null;
+            long occurrence = 0L;
 
-                while (!this.values.isEmpty()) {
-                    TPMMSTuple current = this.values.dequeue();
-                    if (previousValue == null || !previousValue.equals(current.getValue())) {
-                        this.output.write(current.getValue());
-                    }
-
-                    previousValue = current.getValue();
-                    String nextValue = this.readers[current.getReaderNumber()].readLine();
-                    if (nextValue != null) {
-                        current.setValue(nextValue);
-                        this.values.enqueue(current);
-                    }
+            while (!this.topFileValues.isEmpty()) {
+                TPMMSTuple current = this.topFileValues.poll();
+                if (previousValue != null && !previousValue.equals(current.getValue())) {
+                    this.output.write(previousValue);
+                    this.output.write(String.valueOf(occurrence));
+                    occurrence = 0L;
                 }
-            } finally {
-                this.output.close();
-                this.closeReaders();
+                occurrence += current.getOccurrence();
+                previousValue = current.getValue();
+
+                String nextValue = this.readers[current.getReaderNumber()].readLine();
+                if (nextValue != null) {
+                    long nextOccurrence = Long.parseLong(this.readers[current.getReaderNumber()].readLine());
+                    current.setValue(nextValue);
+                    current.setOccurrence(nextOccurrence);
+                    this.topFileValues.add(current);
+                }
             }
+            this.output.close();
+            this.closeReaders();
 
         }
 
@@ -224,10 +228,9 @@ public class TPMMS {
 
             for (String key : values.keySet()) {
                 this.output.write(key);
-                this.output.write("\n");
                 this.output.write(valueIterator.next().toString());
-                this.output.write("\n");
             }
+            this.output.close();
         }
 
         private void removeSpillFiles() {
