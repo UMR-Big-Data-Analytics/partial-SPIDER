@@ -22,6 +22,7 @@ public class SpiderConfiguration {
     private InclusionDependencyResultReceiver resultReceiver;
 
     private TPMMSConfiguration tpmmsConfiguration;
+
     @Singular
     private List<TableInputGenerator> tableInputGenerators;
     @Singular
