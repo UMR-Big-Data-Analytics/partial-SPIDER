@@ -1,4 +1,4 @@
 enum ConfigurationKey {
-  TABLE,
-  PROCESS_EMPTY_COLUMNS
+    TABLE,
+    PROCESS_EMPTY_COLUMNS
 }

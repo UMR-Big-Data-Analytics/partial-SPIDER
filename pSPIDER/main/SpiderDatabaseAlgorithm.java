@@ -9,31 +9,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SpiderDatabaseAlgorithm extends SpiderAlgorithm implements
-    TableInputParameterAlgorithm {
+        TableInputParameterAlgorithm {
 
-  @Override
-  public ArrayList<ConfigurationRequirement<?>> getConfigurationRequirements() {
-    final ArrayList<ConfigurationRequirement<?>> requirements = new ArrayList<>();
-    requirements.addAll(database());
-    requirements.addAll(common());
-    return requirements;
-  }
-
-  private List<ConfigurationRequirement<?>> database() {
-    final List<ConfigurationRequirement<?>> requirements = new ArrayList<>();
-    requirements.add(new ConfigurationRequirementTableInput(ConfigurationKey.TABLE.name(),
-        ConfigurationRequirement.ARBITRARY_NUMBER_OF_VALUES));
-    return requirements;
-  }
-
-  @Override
-  public void setTableInputConfigurationValue(String identifier, TableInputGenerator... values)
-      throws AlgorithmConfigurationException {
-
-    if (identifier.equals(ConfigurationKey.TABLE.name())) {
-      builder.tableInputGenerators(asList(values));
-    } else {
-      handleUnknownConfiguration(identifier, values);
+    @Override
+    public ArrayList<ConfigurationRequirement<?>> getConfigurationRequirements() {
+        final ArrayList<ConfigurationRequirement<?>> requirements = new ArrayList<>();
+        requirements.addAll(database());
+        requirements.addAll(common());
+        return requirements;
     }
-  }
+
+    private List<ConfigurationRequirement<?>> database() {
+        final List<ConfigurationRequirement<?>> requirements = new ArrayList<>();
+        requirements.add(new ConfigurationRequirementTableInput(ConfigurationKey.TABLE.name(),
+                ConfigurationRequirement.ARBITRARY_NUMBER_OF_VALUES));
+        return requirements;
+    }
+
+    @Override
+    public void setTableInputConfigurationValue(String identifier, TableInputGenerator... values)
+            throws AlgorithmConfigurationException {
+
+        if (identifier.equals(ConfigurationKey.TABLE.name())) {
+            builder.tableInputGenerators(asList(values));
+        } else {
+            handleUnknownConfiguration(identifier, values);
+        }
+    }
 }

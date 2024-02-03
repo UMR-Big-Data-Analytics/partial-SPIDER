@@ -17,24 +17,24 @@ import lombok.Singular;
 @Builder
 public class SpiderConfiguration {
 
-  private boolean processEmptyColumns;
-  private FileGenerator tempFileGenerator;
-  private InclusionDependencyResultReceiver resultReceiver;
+    private boolean processEmptyColumns;
+    private FileGenerator tempFileGenerator;
+    private InclusionDependencyResultReceiver resultReceiver;
 
-  private TPMMSConfiguration tpmmsConfiguration;
-  @Singular
-  private List<TableInputGenerator> tableInputGenerators;
-  @Singular
-  private List<RelationalInputGenerator> relationalInputGenerators;
+    private TPMMSConfiguration tpmmsConfiguration;
+    @Singular
+    private List<TableInputGenerator> tableInputGenerators;
+    @Singular
+    private List<RelationalInputGenerator> relationalInputGenerators;
 
-  public static SpiderConfiguration withDefaults() {
-    return builder()
-        .processEmptyColumns(true)
-        .tempFileGenerator(null)
-        .resultReceiver(null)
-        .tpmmsConfiguration(TPMMSConfiguration.withDefaults())
-        .tableInputGenerators(Collections.emptyList())
-        .relationalInputGenerators(Collections.emptyList())
-        .build();
-  }
+    public static SpiderConfiguration withDefaults() {
+        return builder()
+                .processEmptyColumns(true)
+                .tempFileGenerator(null)
+                .resultReceiver(null)
+                .tpmmsConfiguration(TPMMSConfiguration.withDefaults())
+                .tableInputGenerators(Collections.emptyList())
+                .relationalInputGenerators(Collections.emptyList())
+                .build();
+    }
 }
