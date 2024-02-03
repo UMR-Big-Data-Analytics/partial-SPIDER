@@ -12,12 +12,15 @@ import runner.SpiderConfiguration;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
 public class ExternalRepository {
+
+    private int count;
 
     public ReadPointer[] uniqueAndSort(final SpiderConfiguration configuration, final TableInfo table)
             throws AlgorithmExecutionException {
@@ -120,8 +123,10 @@ public class ExternalRepository {
     }
 
     private Path getPath(final SpiderConfiguration configuration)
-            throws FileCreationException {
-
-        return configuration.getTempFileGenerator().getTemporaryFile().toPath();
+            throws FileCreationException, IOException {
+        this.count++;
+        File tempFile = new File(".\\temp\\temp_" + count + "txt");
+        return tempFile.toPath();
+        //return configuration.getTempFileGenerator().getTemporaryFile().toPath();
     }
 }

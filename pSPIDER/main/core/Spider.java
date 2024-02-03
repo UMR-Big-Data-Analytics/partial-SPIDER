@@ -16,6 +16,8 @@ import structures.Attribute;
 import structures.ExternalRepository;
 import structures.ReadPointer;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
@@ -37,19 +39,17 @@ public class Spider {
     }
 
 
-    public void execute(final SpiderConfiguration configuration) throws AlgorithmExecutionException {
+    public void execute(final SpiderConfiguration configuration) throws AlgorithmExecutionException, IOException {
         this.configuration = configuration;
-        final List<TableInfo> table = tableInfoFactory
-                .create(configuration.getRelationalInputGenerators(),
-                        configuration.getTableInputGenerators());
+        final List<TableInfo> table = tableInfoFactory.create(configuration.getRelationalInputGenerators(), configuration.getTableInputGenerators());
         initializeAttributes(table);
         calculateInclusionDependencies();
-        collectResults();
+        int uINDS = collectResults();
+        System.out.println("Unary INDs: " + uINDS);
         shutdown();
     }
 
-    private void initializeAttributes(final List<TableInfo> tables)
-            throws AlgorithmExecutionException {
+    private void initializeAttributes(final List<TableInfo> tables) throws AlgorithmExecutionException {
 
         final int columnCount = getTotalColumnCount(tables);
         attributeIndex = new Attribute[columnCount];
@@ -58,8 +58,7 @@ public class Spider {
         initializeRoles();
     }
 
-    private void createAndEnqueueAttributes(final List<TableInfo> tables)
-            throws AlgorithmExecutionException {
+    private void createAndEnqueueAttributes(final List<TableInfo> tables) throws AlgorithmExecutionException {
 
         int attributeId = 0;
         for (final TableInfo table : tables) {
@@ -81,15 +80,12 @@ public class Spider {
         }
     }
 
-    private Attribute[] getAttributes(final TableInfo table, int startIndex)
-            throws AlgorithmExecutionException {
+    private Attribute[] getAttributes(final TableInfo table, int startIndex) throws AlgorithmExecutionException {
 
         final ReadPointer[] readPointers = externalRepository.uniqueAndSort(configuration, table);
         final Attribute[] attributes = new Attribute[table.getColumnCount()];
         for (int index = 0; index < readPointers.length; ++index) {
-            attributes[index] =
-                    new Attribute(startIndex++, table.getTableName(), table.getColumnNames().get(index),
-                            readPointers[index]);
+            attributes[index] = new Attribute(startIndex++, table.getTableName(), table.getColumnNames().get(index), readPointers[index]);
         }
         return attributes;
     }
@@ -166,7 +162,15 @@ public class Spider {
         return Objects.equals(a1.getCurrentValue(), a2.getCurrentValue());
     }
 
-    private void collectResults() throws CouldNotReceiveResultException, ColumnNameMismatchException {
+    private int collectResults() throws CouldNotReceiveResultException, ColumnNameMismatchException, IOException {
+        int numUnary = 0;
+        BufferedWriter bw = null;
+        try {
+            bw = new BufferedWriter(new FileWriter(".\\results\\INDS.txt"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        assert bw != null;
         for (final Attribute dep : attributeIndex) {
 
             if (dep.getReferenced().isEmpty()) {
@@ -174,15 +178,21 @@ public class Spider {
             }
 
             for (final int refId : dep.getReferenced()) {
+                numUnary++;
                 final Attribute ref = attributeIndex[refId];
 
-                final InclusionDependency ind = InclusionDependencyBuilder
-                        .dependent().column(dep.getTableName(), dep.getColumnName())
-                        .referenced().column(ref.getTableName(), ref.getColumnName()).build();
+                final InclusionDependency ind = InclusionDependencyBuilder.dependent().column(dep.getTableName(), dep.getColumnName()).referenced().column(ref.getTableName(), ref.getColumnName()).build();
 
-                configuration.getResultReceiver().receiveResult(ind);
+                bw.write(dep.getTableName() + " " + dep.getColumnName());
+                bw.write(" < ");
+                bw.write(ref.getTableName() + " " + ref.getColumnName());
+                bw.write('\n');
+
             }
         }
+        bw.flush();
+        bw.close();
+        return numUnary;
     }
 
     private void shutdown() throws AlgorithmExecutionException {

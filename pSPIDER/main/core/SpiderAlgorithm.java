@@ -16,6 +16,7 @@ import de.metanome.util.TPMMSConfigurationRequirements;
 import runner.ConfigurationKey;
 import runner.SpiderConfiguration;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +32,7 @@ abstract class SpiderAlgorithm implements InclusionDependencyAlgorithm,
 
     SpiderAlgorithm() {
         builder = SpiderConfiguration.builder();
-        tpmmsConfiguration = new TPMMSConfiguration();
+        tpmmsConfiguration = new TPMMSConfiguration(-1,50,1000);
         defaultValues = SpiderConfiguration.withDefaults();
         spider = new Spider();
     }
@@ -64,7 +65,11 @@ abstract class SpiderAlgorithm implements InclusionDependencyAlgorithm,
     public void execute() throws AlgorithmExecutionException {
         final SpiderConfiguration configuration = builder.tpmmsConfiguration(tpmmsConfiguration)
                 .build();
-        spider.execute(configuration);
+        try {
+            spider.execute(configuration);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
