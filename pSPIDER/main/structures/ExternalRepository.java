@@ -5,7 +5,6 @@ import de.metanome.algorithm_integration.algorithm_execution.FileCreationExcepti
 import de.metanome.algorithm_integration.input.InputIterationException;
 import de.metanome.algorithm_integration.input.RelationalInput;
 import de.metanome.algorithm_integration.input.RelationalInputGenerator;
-import de.metanome.util.TPMMS;
 import de.metanome.util.TPMMSConfiguration;
 import de.metanome.util.TableInfo;
 import runner.SpiderConfiguration;
