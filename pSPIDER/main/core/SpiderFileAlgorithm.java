@@ -1,3 +1,5 @@
+package core;
+
 import static java.util.Arrays.asList;
 
 import de.metanome.algorithm_integration.AlgorithmConfigurationException;
@@ -5,6 +7,8 @@ import de.metanome.algorithm_integration.algorithm_types.RelationalInputParamete
 import de.metanome.algorithm_integration.configuration.ConfigurationRequirement;
 import de.metanome.algorithm_integration.configuration.ConfigurationRequirementRelationalInput;
 import de.metanome.algorithm_integration.input.RelationalInputGenerator;
+import runner.ConfigurationKey;
+
 import java.util.ArrayList;
 import java.util.List;
 

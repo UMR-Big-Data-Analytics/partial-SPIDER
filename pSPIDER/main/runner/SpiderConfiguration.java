@@ -1,3 +1,5 @@
+package runner;
+
 import de.metanome.algorithm_integration.algorithm_execution.FileGenerator;
 import de.metanome.algorithm_integration.input.RelationalInputGenerator;
 import de.metanome.algorithm_integration.input.TableInputGenerator;
@@ -18,6 +20,10 @@ import lombok.Singular;
 public class SpiderConfiguration {
 
     private boolean processEmptyColumns;
+    public boolean inputFileHasHeader;
+    public boolean skipDifferingLines;
+    public String nullString;
+    public char separator;
     private FileGenerator tempFileGenerator;
     private InclusionDependencyResultReceiver resultReceiver;
 

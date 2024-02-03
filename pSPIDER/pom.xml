@@ -26,6 +26,11 @@
             <artifactId>guava</artifactId>
             <version>33.0.0-jre</version>
         </dependency>
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.9</version>
+        </dependency>
     </dependencies>
 
     <scm>

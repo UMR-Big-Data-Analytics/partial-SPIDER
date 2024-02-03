@@ -1,3 +1,5 @@
+package structures;
+
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -5,6 +7,7 @@ import java.io.IOException;
 import lombok.Data;
 
 @Data
+public
 class Attribute {
 
     private final int id;
@@ -14,8 +17,8 @@ class Attribute {
     private final IntSet dependent;
     private final ReadPointer readPointer;
 
-    Attribute(final int id, final String tableName, final String columnName,
-              final ReadPointer readPointer) {
+    public Attribute(final int id, final String tableName, final String columnName,
+                     final ReadPointer readPointer) {
 
         this.id = id;
         this.readPointer = readPointer;
@@ -25,33 +28,33 @@ class Attribute {
         referenced = new IntLinkedOpenHashSet();
     }
 
-    void addDependent(final IntSet dependent) {
+    public void addDependent(final IntSet dependent) {
         this.dependent.addAll(dependent);
     }
 
-    void removeDependent(final int dependent) {
+    public void removeDependent(final int dependent) {
         this.dependent.remove(dependent);
     }
 
-    void addReferenced(final IntSet referenced) {
+    public void addReferenced(final IntSet referenced) {
         this.referenced.addAll(referenced);
     }
 
-    void removeReferenced(final int referenced) {
+    public void removeReferenced(final int referenced) {
         this.referenced.remove(referenced);
     }
 
-    String getCurrentValue() {
+    public String getCurrentValue() {
         return readPointer.getCurrentValue();
     }
 
-    void nextValue() {
+    public void nextValue() {
         if (readPointer.hasNext()) {
             readPointer.next();
         }
     }
 
-    void intersectReferenced(final IntSet attributes, final Attribute[] attributeIndex) {
+    public void intersectReferenced(final IntSet attributes, final Attribute[] attributeIndex) {
         final IntIterator referencedIterator = referenced.iterator();
         while (referencedIterator.hasNext()) {
             final int ref = referencedIterator.nextInt();
@@ -64,11 +67,11 @@ class Attribute {
         }
     }
 
-    boolean isFinished() {
+    public boolean isFinished() {
         return !readPointer.hasNext() || (referenced.isEmpty() && dependent.isEmpty());
     }
 
-    void close() throws IOException {
+    public void close() throws IOException {
         readPointer.close();
     }
 }

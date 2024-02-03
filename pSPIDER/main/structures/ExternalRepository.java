@@ -1,3 +1,5 @@
+package structures;
+
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
 import de.metanome.algorithm_integration.algorithm_execution.FileCreationException;
 import de.metanome.algorithm_integration.input.InputIterationException;
@@ -6,18 +8,18 @@ import de.metanome.algorithm_integration.input.RelationalInputGenerator;
 import de.metanome.util.TPMMS;
 import de.metanome.util.TPMMSConfiguration;
 import de.metanome.util.TableInfo;
+import runner.SpiderConfiguration;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.io.File;
 import java.util.List;
 
-class ExternalRepository {
+public class ExternalRepository {
 
-    ReadPointer[] uniqueAndSort(final SpiderConfiguration configuration, final TableInfo table)
+    public ReadPointer[] uniqueAndSort(final SpiderConfiguration configuration, final TableInfo table)
             throws AlgorithmExecutionException {
 
         final Path[] paths = store(configuration, table);

@@ -1,3 +1,5 @@
+package core;
+
 import com.google.common.base.Joiner;
 import de.metanome.algorithm_integration.AlgorithmConfigurationException;
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
@@ -11,6 +13,9 @@ import de.metanome.algorithm_integration.configuration.ConfigurationRequirementB
 import de.metanome.algorithm_integration.result_receiver.InclusionDependencyResultReceiver;
 import de.metanome.util.TPMMSConfiguration;
 import de.metanome.util.TPMMSConfigurationRequirements;
+import runner.ConfigurationKey;
+import runner.SpiderConfiguration;
+
 import java.util.ArrayList;
 import java.util.List;
 

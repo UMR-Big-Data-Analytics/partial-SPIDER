@@ -1,11 +1,12 @@
+package structures;
+
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
 
-class ReadPointer implements Iterator<String> {
+public class ReadPointer implements Iterator<String> {
 
     private final BufferedReader reader;
     private String currentValue;

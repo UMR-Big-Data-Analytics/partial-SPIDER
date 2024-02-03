@@ -1,3 +1,5 @@
+package core;
+
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
 import de.metanome.algorithm_integration.result_receiver.ColumnNameMismatchException;
 import de.metanome.algorithm_integration.result_receiver.CouldNotReceiveResultException;
@@ -9,6 +11,11 @@ import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
+import runner.SpiderConfiguration;
+import structures.Attribute;
+import structures.ExternalRepository;
+import structures.ReadPointer;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
