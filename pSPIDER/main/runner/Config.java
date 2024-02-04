@@ -4,31 +4,30 @@ import java.io.File;
 
 public class Config {
 
+    private final double threshold;
     public Config.Algorithm algorithm;
     public String databaseName;
     public String[] tableNames;
-    public int inputRowLimit; // although specifying the row limit in % is more accurate as it uniformly shrinks a dataset, it is still given in #rows, because % would introduce an unfair overhead to SPIDER (you need to count the row numbers of all tables first to perform % on them)
     public String inputFolderPath = "M:\\MA\\data" + File.separator;
     public String inputFileEnding = ".csv";
     public char inputFileSeparator = ',';
     public char inputFileQuoteChar = '\"';
-    public char inputFileEscape = '\\';//'\0';//
+    public char inputFileEscape = '\\';
     public int inputFileSkipLines = 0;
     public boolean inputFileStrictQuotes = true;
     public boolean inputFileIgnoreLeadingWhiteSpace = true;
     public boolean inputFileHasHeader = true;
     public boolean inputFileSkipDifferingLines = true; // Skip lines that differ from the dataset's schema
     public String inputFileNullString = "";
-    public String tempFolderPath = "io" + File.separator + "temp";
-    public String measurementsFolderPath = "io" + File.separator + "measurements"; // + "BINDER" + File.separator;
     public String statisticsFileName = "IND_statistics.txt";
     public String resultFileName = "IND_results.txt";
     public boolean writeResults = true;
 
 
-    public Config(Config.Algorithm algorithm, Config.Dataset dataset) {
+    public Config(Config.Algorithm algorithm, Config.Dataset dataset, double threshold) {
         this.algorithm = algorithm;
         this.setDataset(dataset);
+        this.threshold = threshold;
     }
 
     private void setDataset(Config.Dataset dataset) {
