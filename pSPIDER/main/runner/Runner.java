@@ -1,7 +1,6 @@
 package runner;
 
 import core.Spider;
-import core.SpiderFileAlgorithm;
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
 import de.metanome.algorithm_integration.configuration.ConfigurationSettingFileInput;
 import de.metanome.algorithm_integration.input.FileInputGenerator;
@@ -9,38 +8,47 @@ import de.metanome.util.TPMMSConfiguration;
 import io.DefaultFileInputGenerator;
 
 import java.io.File;
-import java.util.Collections;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Runner {
-    public static void main(String[] args) throws AlgorithmExecutionException {
+    public static void main(String[] args) throws AlgorithmExecutionException, IOException {
 
-        Config config = new Config(Config.Algorithm.SPIDER, Config.Dataset.UEFA);
+        Config config = new Config(Config.Algorithm.SPIDER, Config.Dataset.DATA_GOV, 1.0);
 
-        FileInputGenerator[] fileInputGenerators = new FileInputGenerator[config.tableNames.length];
+        List<FileInputGenerator> fileInputGenerators = new ArrayList<>(config.tableNames.length);
         for (int i = 0; i < config.tableNames.length; i++) {
-            fileInputGenerators[i] = new DefaultFileInputGenerator(new ConfigurationSettingFileInput(config.inputFolderPath + config.databaseName + File.separator + config.tableNames[i] + config.inputFileEnding, true, config.inputFileSeparator, config.inputFileQuoteChar, config.inputFileEscape, config.inputFileStrictQuotes, config.inputFileIgnoreLeadingWhiteSpace, config.inputFileSkipLines, config.inputFileHasHeader, config.inputFileSkipDifferingLines, config.inputFileNullString));
+            fileInputGenerators.add(
+                    new DefaultFileInputGenerator(
+                            new ConfigurationSettingFileInput(
+                                    config.inputFolderPath +
+                                            config.databaseName +
+                                            File.separator +
+                                            config.tableNames[i] +
+                                            config.inputFileEnding,
+                                    true,
+                                    config.inputFileSeparator,
+                                    config.inputFileQuoteChar,
+                                    config.inputFileEscape,
+                                    config.inputFileStrictQuotes,
+                                    config.inputFileIgnoreLeadingWhiteSpace,
+                                    config.inputFileSkipLines,
+                                    config.inputFileHasHeader,
+                                    config.inputFileSkipDifferingLines,
+                                    config.inputFileNullString
+                            )
+                    )
+            );
         }
 
-        SpiderFileAlgorithm spiderFileAlgorithm = new SpiderFileAlgorithm();
-        spiderFileAlgorithm.setRelationalInputConfigurationValue(ConfigurationKey.TABLE.name(), fileInputGenerators);
+        SpiderConfiguration.SpiderConfigurationBuilder builder = SpiderConfiguration.builder();
+        builder.relationalInputGenerators(fileInputGenerators);
 
-        spiderFileAlgorithm.execute();
-        /*
+        TPMMSConfiguration multiwayMergeConfig = new TPMMSConfiguration(-1,50,1000);
+        SpiderConfiguration spiderConfiguration = builder.tpmmsConfiguration(multiwayMergeConfig).build();
+
         Spider spider = new Spider();
-        SpiderConfiguration conf = new SpiderConfiguration(
-                true,
-                true,
-                true,
-                "",
-                ',',
-                null,
-                null,
-                TPMMSConfiguration.withDefaults(),
-                Collections.emptyList(),
-                Collections.emptyList()
-        );
-        spider.execute(conf);
-
-         */
+        spider.execute(spiderConfiguration);
     }
 }

@@ -1,12 +1,9 @@
 package core;
 
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
-import de.metanome.algorithm_integration.result_receiver.ColumnNameMismatchException;
-import de.metanome.algorithm_integration.result_receiver.CouldNotReceiveResultException;
-import de.metanome.algorithm_integration.results.InclusionDependency;
-import de.metanome.util.InclusionDependencyBuilder;
 import de.metanome.util.TableInfo;
 import de.metanome.util.TableInfoFactory;
+import io.ReadPointer;
 import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -14,7 +11,6 @@ import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 import runner.SpiderConfiguration;
 import structures.Attribute;
 import structures.ExternalRepository;
-import structures.ReadPointer;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -164,7 +160,7 @@ public class Spider {
         return Objects.equals(a1.getCurrentValue(), a2.getCurrentValue());
     }
 
-    private int collectResults() throws CouldNotReceiveResultException, ColumnNameMismatchException, IOException {
+    private int collectResults() throws IOException {
         int numUnary = 0;
         BufferedWriter bw = null;
         try {
@@ -182,8 +178,6 @@ public class Spider {
             for (final int refId : dep.getReferenced()) {
                 numUnary++;
                 final Attribute ref = attributeIndex[refId];
-
-                final InclusionDependency ind = InclusionDependencyBuilder.dependent().column(dep.getTableName(), dep.getColumnName()).referenced().column(ref.getTableName(), ref.getColumnName()).build();
 
                 bw.write(dep.getTableName() + " " + dep.getColumnName());
                 bw.write(" < ");
