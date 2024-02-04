@@ -14,19 +14,14 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 
-public class TPMMS {
-    private final TPMMSConfiguration configuration;
-
-    public TPMMS(TPMMSConfiguration configuration) {
-        this.configuration = configuration;
-    }
+public record MultiwayMergeSort(TPMMSConfiguration configuration) {
 
     public void uniqueAndSort(Path path) throws IOException {
-        this.uniqueAndSort(path, new TPMMS.DefaultOutput());
+        this.uniqueAndSort(path, new MultiwayMergeSort.DefaultOutput());
     }
 
-    public void uniqueAndSort(Path path, TPMMS.Output output) throws IOException {
-        (new TPMMS.Execution(this.configuration, path, output)).uniqueAndSort();
+    public void uniqueAndSort(Path path, MultiwayMergeSort.Output output) throws IOException {
+        (new MultiwayMergeSort.Execution(this.configuration, path, output)).uniqueAndSort();
     }
 
     public interface Output extends Closeable {
@@ -35,7 +30,7 @@ public class TPMMS {
         void write(String var1) throws IOException;
     }
 
-    private static class DefaultOutput implements TPMMS.Output {
+    private static class DefaultOutput implements MultiwayMergeSort.Output {
         private BufferedWriter writer;
 
         private DefaultOutput() {
@@ -57,12 +52,12 @@ public class TPMMS {
     }
 
     private static class Merger {
-        private final TPMMS.Output output;
-        private PriorityQueue<TPMMSTuple> topFileValues;
+        private final MultiwayMergeSort.Output output;
+        private PriorityQueue<Entry> topFileValues;
         private BufferedReader[] readers;
 
         @ConstructorProperties({"output"})
-        public Merger(TPMMS.Output output) {
+        public Merger(MultiwayMergeSort.Output output) {
             this.output = output;
         }
 
@@ -76,7 +71,7 @@ public class TPMMS {
                 String firstLine = reader.readLine();
                 if (firstLine != null) {
                     long occurrence = Long.parseLong(reader.readLine());
-                    this.topFileValues.add(new TPMMSTuple(firstLine, occurrence, index));
+                    this.topFileValues.add(new Entry(firstLine, occurrence, index));
                 }
             }
 
@@ -90,7 +85,7 @@ public class TPMMS {
             long occurrence = 0L;
 
             while (!this.topFileValues.isEmpty()) {
-                TPMMSTuple current = this.topFileValues.poll();
+                Entry current = this.topFileValues.poll();
                 if (previousValue != null && !previousValue.equals(current.getValue())) {
                     this.output.write(previousValue);
                     this.output.write(String.valueOf(occurrence));
@@ -126,7 +121,7 @@ public class TPMMS {
 
     private static class Execution {
         private final TPMMSConfiguration configuration;
-        private final TPMMS.Output output;
+        private final MultiwayMergeSort.Output output;
         private final Path origin;
         private final long maxMemoryUsage;
         private final Map<String, Long> values;
@@ -134,7 +129,7 @@ public class TPMMS {
         private int totalValues;
         private int valuesSinceLastMemoryCheck;
 
-        private Execution(TPMMSConfiguration configuration, Path origin, TPMMS.Output output) {
+        private Execution(TPMMSConfiguration configuration, Path origin, MultiwayMergeSort.Output output) {
             this.values = new TreeMap<>();
             this.spilledFiles = new ArrayList<>();
             this.totalValues = 0;
@@ -159,7 +154,7 @@ public class TPMMS {
                     this.writeSpillFile();
                 }
 
-                (new TPMMS.Merger(this.output)).merge(this.spilledFiles, this.origin);
+                (new MultiwayMergeSort.Merger(this.output)).merge(this.spilledFiles, this.origin);
             }
 
             this.removeSpillFiles();

@@ -1,4 +1,4 @@
-package structures;
+package io;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,7 +16,7 @@ public class ReadPointer implements Iterator<String> {
         currentValue = reader.readLine();
     }
 
-    String getCurrentValue() {
+    public String getCurrentValue() {
         return currentValue;
     }
 
@@ -36,11 +36,11 @@ public class ReadPointer implements Iterator<String> {
         }
     }
 
-    void close() throws IOException {
+    public void close() throws IOException {
         reader.close();
     }
 
-    static ReadPointer of(final Path path) throws IOException {
+    public static ReadPointer of(final Path path) throws IOException {
         return new ReadPointer(Files.newBufferedReader(path));
     }
 }
