@@ -1,5 +1,6 @@
 package structures;
 
+import io.ReadPointer;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -34,7 +35,9 @@ public class Attribute {
         this.dependent = new IntLinkedOpenHashSet();
         this.referenced = new IntLinkedOpenHashSet();
         this.currentValue = readPointer.getCurrentValue();
-        this.currentOccurrences = Long.parseLong(readPointer.next());
+        if (readPointer.hasNext()) {
+            this.currentOccurrences = Long.parseLong(readPointer.next());
+        }
     }
 
     /**
