@@ -15,10 +15,7 @@ import structures.ExternalRepository;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class Spider {
 
@@ -29,6 +26,7 @@ public class Spider {
     private SpiderConfiguration configuration;
     private Attribute[] attributeIndex;
     private PriorityQueue<Attribute> priorityQueue;
+    private double threshold;
 
 
     public Spider() {
@@ -37,8 +35,9 @@ public class Spider {
     }
 
 
-    public void execute(final SpiderConfiguration configuration) throws AlgorithmExecutionException, IOException {
+    public void execute(final SpiderConfiguration configuration, double threshold) throws AlgorithmExecutionException, IOException {
         this.configuration = configuration;
+        this.threshold = threshold;
         final List<TableInfo> table = tableInfoFactory.create(configuration.getRelationalInputGenerators(), configuration.getTableInputGenerators());
         initializeAttributes(table);
         calculateInclusionDependencies();
@@ -59,6 +58,7 @@ public class Spider {
     private void createAndEnqueueAttributes(final List<TableInfo> tables) throws AlgorithmExecutionException {
 
         int attributeId = 0;
+        List<Attribute> nullAttributes = new ArrayList<>();
         for (final TableInfo table : tables) {
             final Attribute[] attributes = getAttributes(table, attributeId);
             attributeId += attributes.length;
@@ -68,12 +68,18 @@ public class Spider {
                 if (attribute.getReadPointer().hasNext()) {
                     // Has next value: always process.
                     priorityQueue.enqueue(attribute);
-                } else if (!configuration.isProcessEmptyColumns()) {
-                    // When ignoring empty columns, insert empty columns into queue.
-                    // Only during normal processing the dependent and referenced set of empty attributes
-                    // will be cleared.
-                    priorityQueue.enqueue(attribute);
+                } else {
+                    // this attribute carries only null values
+                    nullAttributes.add(attribute);
                 }
+            }
+        }
+
+        // this is the NULL is subset interpretation
+        for (Attribute nullAttribute : nullAttributes) {
+            nullAttribute.getDependent().clear();
+            for (Attribute attribute : attributeIndex) {
+                attribute.removeReferenced(nullAttribute.getId());
             }
         }
     }
@@ -82,8 +88,9 @@ public class Spider {
 
         final ReadPointer[] readPointers = externalRepository.uniqueAndSort(configuration, table);
         final Attribute[] attributes = new Attribute[table.getColumnCount()];
+        long allowedViolations = (long) ((1.0 - threshold) * externalRepository.tableLength);
         for (int index = 0; index < readPointers.length; ++index) {
-            attributes[index] = new Attribute(startIndex++, table.getTableName(), table.getColumnNames().get(index), readPointers[index]);
+            attributes[index] = new Attribute(startIndex++, table.getTableName(), table.getColumnNames().get(index), allowedViolations, readPointers[index]);
         }
         return attributes;
     }
@@ -175,7 +182,7 @@ public class Spider {
                 continue;
             }
 
-            for (final int refId : dep.getReferenced()) {
+            for (final int refId : dep.getReferenced().keySet()) {
                 numUnary++;
                 final Attribute ref = attributeIndex[refId];
 

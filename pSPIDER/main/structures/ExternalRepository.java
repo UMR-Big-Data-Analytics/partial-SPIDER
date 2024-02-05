@@ -19,10 +19,10 @@ import java.util.List;
 public class ExternalRepository {
 
     private int count;
+    public long tableLength = 0;
 
-    public ReadPointer[] uniqueAndSort(final SpiderConfiguration configuration, final TableInfo table)
-            throws AlgorithmExecutionException {
-
+    public ReadPointer[] uniqueAndSort(final SpiderConfiguration configuration, final TableInfo table) throws AlgorithmExecutionException {
+        tableLength = 0;
         final Path[] paths = store(table);
         // can we get away without storing the tables to new files first?
         try {
@@ -69,6 +69,7 @@ public class ExternalRepository {
 
         try (RelationalInput input = generator.generateNewCopy()) {
             while (input.hasNext()) {
+                tableLength++;
                 final List<String> next = input.next();
                 for (int index = 0; index < writers.length; index++) {
                     final String value = index >= next.size() ? null : next.get(index);

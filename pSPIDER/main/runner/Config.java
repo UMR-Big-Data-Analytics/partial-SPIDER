@@ -4,7 +4,7 @@ import java.io.File;
 
 public class Config {
 
-    private final double threshold;
+    final double threshold;
     public Config.Algorithm algorithm;
     public String databaseName;
     public String[] tableNames;

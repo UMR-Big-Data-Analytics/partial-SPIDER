@@ -5,6 +5,9 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
 import lombok.Data;
@@ -17,23 +20,25 @@ public class Attribute {
     private final int id;
     private final String tableName;
     private final String columnName;
-    private final IntSet referenced;
+    private final Map<Integer, Long> referenced;
     private final IntSet dependent;
     private final ReadPointer readPointer;
+    private long violationsLeft;
     private String currentValue;
     private Long currentOccurrences;
 
     /**
      * An Attribute resembles a column. It manages its own dependent and referenced attributes.
      */
-    public Attribute(int id, String tableName, String columnName, ReadPointer readPointer) {
+    public Attribute(int id, String tableName, String columnName, long violationsLeft, ReadPointer readPointer) {
 
         this.id = id;
         this.readPointer = readPointer;
         this.tableName = tableName;
         this.columnName = columnName;
+        this.violationsLeft = violationsLeft;
         this.dependent = new IntLinkedOpenHashSet();
-        this.referenced = new IntLinkedOpenHashSet();
+        this.referenced = new HashMap<>();
         this.currentValue = readPointer.getCurrentValue();
         if (readPointer.hasNext()) {
             this.currentOccurrences = Long.parseLong(readPointer.next());
@@ -61,7 +66,7 @@ public class Attribute {
      * @param referenced ids of attributes that should be added
      */
     public void addReferenced(final IntSet referenced) {
-        this.referenced.addAll(referenced);
+        referenced.forEach(x -> this.referenced.put(x, violationsLeft));
     }
 
     /**
@@ -94,15 +99,19 @@ public class Attribute {
      */
     public void intersectReferenced(Set<Integer> attributes, final Attribute[] attributeIndex) {
         // TODO: adjust to respect pINDs
-        final IntIterator referencedIterator = referenced.iterator();
+        Iterator<Integer> referencedIterator = referenced.keySet().iterator();
         while (referencedIterator.hasNext()) {
-            final int ref = referencedIterator.nextInt();
+            final int ref = referencedIterator.next();
             if (attributes.contains(ref)) {
                 continue;
             }
 
-            referencedIterator.remove();
-            attributeIndex[ref].removeDependent(id);
+            referenced.put(ref, referenced.get(ref) - currentOccurrences);
+
+            if (referenced.get(ref) < 0L) {
+                referencedIterator.remove();
+                attributeIndex[ref].removeDependent(id);
+            }
         }
     }
 
