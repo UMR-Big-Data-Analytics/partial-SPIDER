@@ -1,17 +1,15 @@
 package runner;
 
-import de.metanome.algorithm_integration.input.InputIterationException;
 import io.RelationalFileInput;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Config {
 
     public final double threshold;
-    public Config.Algorithm algorithm;
     public String databaseName;
     public String[] tableNames;
     public String folderPath = "M:\\MA\\data" + File.separator;
@@ -24,18 +22,9 @@ public class Config {
     public boolean inputFileHasHeader = true;
     public boolean inputFileSkipDifferingLines = true; // Skip lines that differ from the dataset's schema
     public String inputFileNullString = "";
-    public boolean writeResults = true;
+    public boolean writeResults = true; // TODO: use this option
 
-    public enum Algorithm {
-        SPIDER
-    }
-
-    public enum Dataset {
-        TPCH_1, KAGGLE, DATA_GOV, UEFA
-    }
-
-    public Config(Config.Algorithm algorithm, Config.Dataset dataset, double threshold) {
-        this.algorithm = algorithm;
+    public Config(Config.Dataset dataset, double threshold) {
         this.setDataset(dataset);
         this.threshold = threshold;
     }
@@ -57,23 +46,14 @@ public class Config {
             }
             case DATA_GOV -> {
                 this.databaseName = "data.gov\\";
-                this.tableNames = new String[]{"Air_Quality", "Air_Traffic_Passenger_Statistics",
-                        "Crash_Reporting_-_Drivers_Data", "Crime_Data_from_2020_to_Present", "Demographic_Statistics_By_Zip_Code",
-                        "diabetes_all_2016", "Electric_Vehicle_Population_Data", "iou_zipcodes_2020",
-                        "Lottery_Mega_Millions_Winning_Numbers__Beginning_2002", "Lottery_Powerball_Winning_Numbers__Beginning_2010",
-                        "Motor_Vehicle_Collisions_-_Crashes", "National_Obesity_By_State",
-                        "NCHS_-_Death_rates_and_life_expectancy_at_birth", "Popular_Baby_Names", "Real_Estate_Sales_2001-2020_GL",
-                        "Traffic_Crashes_-_Crashes", "Warehouse_and_Retail_Sales"
-                };
+                this.tableNames = new String[]{"Air_Quality", "Air_Traffic_Passenger_Statistics", "Crash_Reporting_-_Drivers_Data", "Crime_Data_from_2020_to_Present", "Demographic_Statistics_By_Zip_Code", "diabetes_all_2016", "Electric_Vehicle_Population_Data", "iou_zipcodes_2020", "Lottery_Mega_Millions_Winning_Numbers__Beginning_2002", "Lottery_Powerball_Winning_Numbers__Beginning_2010", "Motor_Vehicle_Collisions_-_Crashes", "National_Obesity_By_State", "NCHS_-_Death_rates_and_life_expectancy_at_birth", "Popular_Baby_Names", "Real_Estate_Sales_2001-2020_GL", "Traffic_Crashes_-_Crashes", "Warehouse_and_Retail_Sales"};
                 this.separator = ',';
                 this.inputFileHasHeader = true;
                 this.fileEnding = ".csv";
             }
             case UEFA -> {
                 this.databaseName = "uefa\\";
-                this.tableNames = new String[]{"attacking", "attempts", "defending", "disciplinary", "distributon",
-                        "goalkeeping", "goals", "key_stats"
-                };
+                this.tableNames = new String[]{"attacking", "attempts", "defending", "disciplinary", "distributon", "goalkeeping", "goals", "key_stats"};
                 this.separator = ',';
                 this.inputFileHasHeader = true;
                 this.fileEnding = ".csv";
@@ -83,9 +63,7 @@ public class Config {
         }
     }
 
-
-
-    public List<RelationalFileInput> getFileInputs() throws InputIterationException, FileNotFoundException {
+    public List<RelationalFileInput> getFileInputs() throws IOException {
         List<RelationalFileInput> fileInputGenerators = new ArrayList<>(tableNames.length);
         for (String tableName : tableNames) {
             String relationName = databaseName + "." + tableName;
@@ -93,5 +71,14 @@ public class Config {
             fileInputGenerators.add(new RelationalFileInput(relationName, relationPath, this));
         }
         return fileInputGenerators;
+    }
+
+    public enum Dataset {
+        TPCH_1, KAGGLE, DATA_GOV, UEFA
+    }
+
+    // TODO: Add defined cases
+    public enum NullHandling {
+        NULL_IS_SUBSET
     }
 }
