@@ -24,18 +24,18 @@ public class Spider {
 
     private Attribute[] attributeIndex;
     private PriorityQueue<Attribute> priorityQueue;
-    private double threshold;
+    private final double threshold;
 
 
     public Spider(Config config) {
         this.config = config;
+        this.threshold = config.threshold;
         externalRepository = new ExternalRepository();
     }
 
 
-    public void execute(List<RelationalFileInput> tables, double threshold) throws AlgorithmExecutionException, IOException {
-        this.threshold = threshold;
-        initializeAttributes(tables);
+    public void execute() throws AlgorithmExecutionException, IOException {
+        initializeAttributes(this.config.getFileInputs());
         calculateInclusionDependencies();
         int unaryINDs = collectResults();
         System.out.println("Unary INDs: " + unaryINDs);
@@ -56,6 +56,7 @@ public class Spider {
         int attributeId = 0;
         List<Attribute> nullAttributes = new ArrayList<>();
         for (RelationalFileInput table : tables) {
+            System.out.println(table.relationName());
             final Attribute[] attributes = getAttributes(table, attributeId);
             attributeId += attributes.length;
 

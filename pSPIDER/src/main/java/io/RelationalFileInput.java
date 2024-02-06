@@ -41,7 +41,13 @@ public class RelationalFileInput implements RelationalInput {
         BufferedReader reader = new BufferedReader(new FileReader(relationPath));
 
         this.CSVReader = new CSVReaderBuilder(reader).withCSVParser(
-                new CSVParserBuilder().withSeparator(config.inputFileSeparator).build()
+                new CSVParserBuilder()
+                        .withSeparator(config.separator)
+                        .withEscapeChar(config.fileEscape)
+                        .withIgnoreLeadingWhiteSpace(config.ignoreLeadingWhiteSpace)
+                        .withStrictQuotes(config.strictQuotes)
+                        .withQuoteChar(config.quoteChar)
+                        .build()
         ).build();
 
         // read the first line

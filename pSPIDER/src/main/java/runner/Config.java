@@ -1,28 +1,38 @@
 package runner;
 
+import de.metanome.algorithm_integration.input.InputIterationException;
+import io.RelationalFileInput;
+
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Config {
 
-    final double threshold;
+    public final double threshold;
     public Config.Algorithm algorithm;
     public String databaseName;
     public String[] tableNames;
-    public String inputFolderPath = "M:\\MA\\data" + File.separator;
-    public String inputFileEnding = ".csv";
-    public char inputFileSeparator = ',';
-    public char inputFileQuoteChar = '\"';
-    public char inputFileEscape = '\\';
-    public int inputFileSkipLines = 0;
-    public boolean inputFileStrictQuotes = true;
-    public boolean inputFileIgnoreLeadingWhiteSpace = true;
+    public String folderPath = "M:\\MA\\data" + File.separator;
+    public String fileEnding = ".csv";
+    public char separator = ',';
+    public char quoteChar = '\"';
+    public char fileEscape = '\\';
+    public boolean strictQuotes = false;
+    public boolean ignoreLeadingWhiteSpace = true;
     public boolean inputFileHasHeader = true;
     public boolean inputFileSkipDifferingLines = true; // Skip lines that differ from the dataset's schema
     public String inputFileNullString = "";
-    public String statisticsFileName = "IND_statistics.txt";
-    public String resultFileName = "IND_results.txt";
     public boolean writeResults = true;
 
+    public enum Algorithm {
+        SPIDER
+    }
+
+    public enum Dataset {
+        TPCH_1, KAGGLE, DATA_GOV, UEFA
+    }
 
     public Config(Config.Algorithm algorithm, Config.Dataset dataset, double threshold) {
         this.algorithm = algorithm;
@@ -35,15 +45,15 @@ public class Config {
             case KAGGLE -> {
                 this.databaseName = "Kaggle\\";
                 this.tableNames = new String[]{"enrollement_schoolmanagement_2", "data", "amazon_laptop_prices_v01", "IQ_level", "Employee", "employee_data (1)"};
-                this.inputFileSeparator = ',';
+                this.separator = ',';
                 this.inputFileHasHeader = true;
             }
             case TPCH_1 -> {
                 this.databaseName = "TPCH_1\\";
                 this.tableNames = new String[]{"customer", "lineitem", "nation", "orders", "part", "region", "supplier"};
-                this.inputFileSeparator = '|';
+                this.separator = '|';
                 this.inputFileHasHeader = false;
-                this.inputFileEnding = ".tbl";
+                this.fileEnding = ".tbl";
             }
             case DATA_GOV -> {
                 this.databaseName = "data.gov\\";
@@ -55,29 +65,33 @@ public class Config {
                         "NCHS_-_Death_rates_and_life_expectancy_at_birth", "Popular_Baby_Names", "Real_Estate_Sales_2001-2020_GL",
                         "Traffic_Crashes_-_Crashes", "Warehouse_and_Retail_Sales"
                 };
-                this.inputFileSeparator = ',';
+                this.separator = ',';
                 this.inputFileHasHeader = true;
-                this.inputFileEnding = ".csv";
+                this.fileEnding = ".csv";
             }
             case UEFA -> {
                 this.databaseName = "uefa\\";
                 this.tableNames = new String[]{"attacking", "attempts", "defending", "disciplinary", "distributon",
                         "goalkeeping", "goals", "key_stats"
                 };
-                this.inputFileSeparator = ',';
+                this.separator = ',';
                 this.inputFileHasHeader = true;
-                this.inputFileEnding = ".csv";
+                this.fileEnding = ".csv";
             }
             default -> {
             }
         }
     }
 
-    public enum Algorithm {
-        SPIDER
-    }
 
-    public enum Dataset {
-        TPCH_1, KAGGLE, DATA_GOV, UEFA
+
+    public List<RelationalFileInput> getFileInputs() throws InputIterationException, FileNotFoundException {
+        List<RelationalFileInput> fileInputGenerators = new ArrayList<>(tableNames.length);
+        for (String tableName : tableNames) {
+            String relationName = databaseName + "." + tableName;
+            String relationPath = folderPath + databaseName + File.separator + tableName + fileEnding;
+            fileInputGenerators.add(new RelationalFileInput(relationName, relationPath, this));
+        }
+        return fileInputGenerators;
     }
 }
