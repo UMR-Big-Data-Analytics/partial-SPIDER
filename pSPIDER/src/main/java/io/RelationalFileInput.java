@@ -7,11 +7,9 @@ import com.opencsv.exceptions.CsvValidationException;
 import de.metanome.algorithm_integration.configuration.ConfigurationSettingFileInput;
 import de.metanome.algorithm_integration.input.InputIterationException;
 import de.metanome.algorithm_integration.input.RelationalInput;
-import runner.SpiderConfiguration;
+import runner.Config;
 
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,14 +31,18 @@ public class RelationalFileInput implements RelationalInput {
     protected String nullValue;
 
 
-    public RelationalFileInput(String relationName, Reader reader, SpiderConfiguration setting) throws InputIterationException {
+    public RelationalFileInput(String relationName, String relationPath, Config config) throws InputIterationException, FileNotFoundException {
         this.relationName = relationName;
 
-        this.hasHeader = setting.inputFileHasHeader;
-        this.skipDifferingLines = setting.skipDifferingLines;
-        this.nullValue = setting.nullString;
+        this.hasHeader = config.inputFileHasHeader;
+        this.skipDifferingLines = config.inputFileSkipDifferingLines;
+        this.nullValue = config.inputFileNullString;
 
-        this.CSVReader = new CSVReaderBuilder(reader).withCSVParser(new CSVParserBuilder().withSeparator(setting.separator).build()).build();
+        BufferedReader reader = new BufferedReader(new FileReader(relationPath));
+
+        this.CSVReader = new CSVReaderBuilder(reader).withCSVParser(
+                new CSVParserBuilder().withSeparator(config.inputFileSeparator).build()
+        ).build();
 
         // read the first line
         this.nextLine = readNextLine();

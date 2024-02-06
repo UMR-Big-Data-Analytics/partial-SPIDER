@@ -1,14 +1,14 @@
 package core;
 
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
-import de.metanome.util.TableInfo;
-import de.metanome.util.TableInfoFactory;
+import de.metanome.util.TPMMSConfiguration;
 import io.ReadPointer;
+import io.RelationalFileInput;
 import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
-import runner.SpiderConfiguration;
+import runner.Config;
 import structures.Attribute;
 import structures.ExternalRepository;
 
@@ -19,34 +19,30 @@ import java.util.*;
 
 public class Spider {
 
-
-    private final TableInfoFactory tableInfoFactory;
+    private final Config config;
     private final ExternalRepository externalRepository;
 
-    private SpiderConfiguration configuration;
     private Attribute[] attributeIndex;
     private PriorityQueue<Attribute> priorityQueue;
     private double threshold;
 
 
-    public Spider() {
-        tableInfoFactory = new TableInfoFactory();
+    public Spider(Config config) {
+        this.config = config;
         externalRepository = new ExternalRepository();
     }
 
 
-    public void execute(final SpiderConfiguration configuration, double threshold) throws AlgorithmExecutionException, IOException {
-        this.configuration = configuration;
+    public void execute(List<RelationalFileInput> tables, double threshold) throws AlgorithmExecutionException, IOException {
         this.threshold = threshold;
-        final List<TableInfo> table = tableInfoFactory.create(configuration.getRelationalInputGenerators(), configuration.getTableInputGenerators());
-        initializeAttributes(table);
+        initializeAttributes(tables);
         calculateInclusionDependencies();
-        int uINDS = collectResults();
-        System.out.println("Unary INDs: " + uINDS);
+        int unaryINDs = collectResults();
+        System.out.println("Unary INDs: " + unaryINDs);
         shutdown();
     }
 
-    private void initializeAttributes(final List<TableInfo> tables) throws AlgorithmExecutionException {
+    private void initializeAttributes(final List<RelationalFileInput> tables) throws AlgorithmExecutionException, IOException {
 
         final int columnCount = getTotalColumnCount(tables);
         attributeIndex = new Attribute[columnCount];
@@ -55,11 +51,11 @@ public class Spider {
         initializeRoles();
     }
 
-    private void createAndEnqueueAttributes(final List<TableInfo> tables) throws AlgorithmExecutionException {
+    private void createAndEnqueueAttributes(final List<RelationalFileInput> tables) throws AlgorithmExecutionException, IOException {
 
         int attributeId = 0;
         List<Attribute> nullAttributes = new ArrayList<>();
-        for (final TableInfo table : tables) {
+        for (RelationalFileInput table : tables) {
             final Attribute[] attributes = getAttributes(table, attributeId);
             attributeId += attributes.length;
 
@@ -84,13 +80,13 @@ public class Spider {
         }
     }
 
-    private Attribute[] getAttributes(final TableInfo table, int startIndex) throws AlgorithmExecutionException {
+    private Attribute[] getAttributes(final RelationalFileInput table, int startIndex) throws AlgorithmExecutionException, IOException {
 
-        final ReadPointer[] readPointers = externalRepository.uniqueAndSort(configuration, table);
-        final Attribute[] attributes = new Attribute[table.getColumnCount()];
+        final ReadPointer[] readPointers = externalRepository.uniqueAndSort(new TPMMSConfiguration(-1, 80, 10000), table);
+        final Attribute[] attributes = new Attribute[table.numberOfColumns()];
         long allowedViolations = (long) ((1.0 - threshold) * externalRepository.tableLength);
         for (int index = 0; index < readPointers.length; ++index) {
-            attributes[index] = new Attribute(startIndex++, table.getTableName(), table.getColumnNames().get(index), allowedViolations, readPointers[index]);
+            attributes[index] = new Attribute(startIndex++, table.relationName(), table.headerLine.get(index), allowedViolations, readPointers[index]);
         }
         return attributes;
     }
@@ -113,8 +109,8 @@ public class Spider {
         return ids;
     }
 
-    private int getTotalColumnCount(final List<TableInfo> tables) {
-        return tables.stream().mapToInt(TableInfo::getColumnCount).sum();
+    private int getTotalColumnCount(final List<RelationalFileInput> tables) {
+        return tables.stream().mapToInt(RelationalFileInput::numberOfColumns).sum();
     }
 
     private int compareAttributes(final Attribute a1, final Attribute a2) {

@@ -1,12 +1,9 @@
 package structures;
 
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
-import de.metanome.algorithm_integration.input.RelationalInput;
-import de.metanome.algorithm_integration.input.RelationalInputGenerator;
 import de.metanome.util.TPMMSConfiguration;
-import de.metanome.util.TableInfo;
 import io.ReadPointer;
-import runner.SpiderConfiguration;
+import io.RelationalFileInput;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -18,15 +15,15 @@ import java.util.List;
 
 public class ExternalRepository {
 
-    private int count;
     public long tableLength = 0;
+    private int count;
 
-    public ReadPointer[] uniqueAndSort(final SpiderConfiguration configuration, final TableInfo table) throws AlgorithmExecutionException {
+    public ReadPointer[] uniqueAndSort(final TPMMSConfiguration configuration, RelationalFileInput table) throws AlgorithmExecutionException, IOException {
         tableLength = 0;
         final Path[] paths = store(table);
         // can we get away without storing the tables to new files first?
         try {
-            uniqueAndSort(paths, configuration.getTpmmsConfiguration());
+            uniqueAndSort(paths, configuration);
             return open(paths);
         } catch (final IOException e) {
             throw new AlgorithmExecutionException("MultiwayMergeSort failure", e);
@@ -42,12 +39,12 @@ public class ExternalRepository {
         }
     }
 
-    private Path[] store(final TableInfo table) throws AlgorithmExecutionException {
+    private Path[] store(RelationalFileInput table) throws AlgorithmExecutionException, IOException {
 
-        final Path[] paths = new Path[table.getColumnCount()];
-        final BufferedWriter[] writers = new BufferedWriter[table.getColumnCount()];
+        final Path[] paths = new Path[table.numberOfColumns()];
+        final BufferedWriter[] writers = new BufferedWriter[table.numberOfColumns()];
         openForWriting(paths, writers);
-        write(table.selectInputGenerator(), writers);
+        write(table, writers);
         close(writers);
         return paths;
     }
@@ -64,23 +61,19 @@ public class ExternalRepository {
         }
     }
 
-    private void write(final RelationalInputGenerator generator, final BufferedWriter[] writers)
-            throws AlgorithmExecutionException {
+    private void write(final RelationalFileInput file, final BufferedWriter[] writers)
+            throws AlgorithmExecutionException, IOException {
 
-        try (RelationalInput input = generator.generateNewCopy()) {
-            while (input.hasNext()) {
-                tableLength++;
-                final List<String> next = input.next();
-                for (int index = 0; index < writers.length; index++) {
-                    final String value = index >= next.size() ? null : next.get(index);
-                    if (value != null) {
-                        writers[index].write(escape(value));
-                        writers[index].newLine();
-                    }
+        while (file.hasNext()) {
+            tableLength++;
+            final List<String> next = file.next();
+            for (int index = 0; index < writers.length; index++) {
+                final String value = index >= next.size() ? null : next.get(index);
+                if (value != null) {
+                    writers[index].write(escape(value));
+                    writers[index].newLine();
                 }
             }
-        } catch (final Exception e) {
-            throw new AlgorithmExecutionException("error while storing attributes to disk", e);
         }
     }
 
