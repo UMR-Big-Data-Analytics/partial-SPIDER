@@ -3,16 +3,15 @@ package structures;
 import io.ReadPointer;
 import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import lombok.Data;
+
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import lombok.Data;
-
 @Data
-
 public class Attribute {
 
 
@@ -22,6 +21,7 @@ public class Attribute {
     private final Map<Integer, Long> referenced;
     private final IntSet dependent;
     private final ReadPointer readPointer;
+    private final long nullCount;
     private long violationsLeft;
     private String currentValue;
     private Long currentOccurrences;
@@ -29,13 +29,14 @@ public class Attribute {
     /**
      * An Attribute resembles a column. It manages its own dependent and referenced attributes.
      */
-    public Attribute(int id, String tableName, String columnName, long violationsLeft, ReadPointer readPointer) {
+    public Attribute(int id, String tableName, String columnName, long violationsLeft, long nullCount, ReadPointer readPointer) {
 
         this.id = id;
         this.readPointer = readPointer;
         this.tableName = tableName;
         this.columnName = columnName;
         this.violationsLeft = violationsLeft;
+        this.nullCount = nullCount;
         this.dependent = new IntLinkedOpenHashSet();
         this.referenced = new HashMap<>();
         this.currentValue = readPointer.getCurrentValue();
@@ -46,6 +47,7 @@ public class Attribute {
 
     /**
      * Adds all dependent ids from the given Set to the internal dependent set.
+     *
      * @param dependent ids of attributes that should be added
      */
     public void addDependent(final IntSet dependent) {
@@ -54,6 +56,7 @@ public class Attribute {
 
     /**
      * Removes all dependent ids from the given Set from the internal dependent set.
+     *
      * @param dependent ids of attributes that should be removed
      */
     public void removeDependent(final int dependent) {
@@ -62,6 +65,7 @@ public class Attribute {
 
     /**
      * Adds all referenced ids from the given Set to the internal referenced set.
+     *
      * @param referenced ids of attributes that should be added
      */
     public void addReferenced(final IntSet referenced) {
@@ -70,6 +74,7 @@ public class Attribute {
 
     /**
      * Removes all referenced ids from the given Set from the internal referenced set.
+     *
      * @param referenced ids of attributes that should be removed
      */
     public void removeReferenced(final int referenced) {
@@ -78,6 +83,7 @@ public class Attribute {
 
     /**
      * Updates the internal variables currentValue and currentOccurrences
+     *
      * @return True if there was a next value to load, false otherwise
      */
     public boolean nextValue() {
@@ -93,7 +99,8 @@ public class Attribute {
 
     /**
      * Updates the dependant and referenced sets using the attributes that share a value.
-     * @param attributes Set of attribute ids, which share some value
+     *
+     * @param attributes     Set of attribute ids, which share some value
      * @param attributeIndex The index that stores all attributes
      */
     public void intersectReferenced(Set<Integer> attributes, final Attribute[] attributeIndex) {
@@ -125,6 +132,7 @@ public class Attribute {
 
     /**
      * Closes the reader connected to the attribute.
+     *
      * @throws IOException if the reader fails to close
      */
     public void close() throws IOException {
