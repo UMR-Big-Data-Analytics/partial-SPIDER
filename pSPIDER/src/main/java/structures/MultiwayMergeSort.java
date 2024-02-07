@@ -1,6 +1,6 @@
 package structures;
 
-import de.metanome.util.TPMMSConfiguration;
+import runner.Config;
 
 import java.beans.ConstructorProperties;
 import java.io.BufferedReader;
@@ -14,14 +14,14 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 
-public record MultiwayMergeSort(TPMMSConfiguration configuration) {
+public record MultiwayMergeSort(runner.Config configuration) {
 
     public void uniqueAndSort(Path path) throws IOException {
         this.uniqueAndSort(path, new MultiwayMergeSort.DefaultOutput());
     }
 
     public void uniqueAndSort(Path path, MultiwayMergeSort.Output output) throws IOException {
-        (new MultiwayMergeSort.Execution(this.configuration, path, output)).uniqueAndSort();
+        (new MultiwayMergeSort.Execution(configuration, path, output)).uniqueAndSort();
     }
 
     public interface Output extends Closeable {
@@ -120,29 +120,27 @@ public record MultiwayMergeSort(TPMMSConfiguration configuration) {
     }
 
     private static class Execution {
-        private final TPMMSConfiguration configuration;
         private final MultiwayMergeSort.Output output;
         private final Path origin;
         private final long maxMemoryUsage;
         private final Map<String, Long> values;
         private final List<Path> spilledFiles;
-        private int totalValues;
+        private final int memoryCheckFrequency;
         private int valuesSinceLastMemoryCheck;
 
-        private Execution(TPMMSConfiguration configuration, Path origin, MultiwayMergeSort.Output output) {
+        private Execution(Config configuration, Path origin, Output output) {
             this.values = new TreeMap<>();
             this.spilledFiles = new ArrayList<>();
-            this.totalValues = 0;
             this.valuesSinceLastMemoryCheck = 0;
-            this.configuration = configuration;
             this.output = output;
             this.origin = origin;
-            this.maxMemoryUsage = getMaxMemoryUsage(configuration);
+            this.memoryCheckFrequency = configuration.memoryCheckFrequency;
+            this.maxMemoryUsage = getMaxMemoryUsage(configuration.maxMemoryPercent);
         }
 
-        private static long getMaxMemoryUsage(TPMMSConfiguration configuration) {
+        private static long getMaxMemoryUsage(int maxMemoryPercent) {
             long available = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-            return (long) ((double) available * ((double) configuration.getMaxMemoryUsagePercentage() / 100.0D));
+            return (long) ((double) available * ((double) maxMemoryPercent / 100.0D));
         }
 
         private void uniqueAndSort() throws IOException {
@@ -164,7 +162,7 @@ public record MultiwayMergeSort(TPMMSConfiguration configuration) {
             BufferedReader reader = Files.newBufferedReader(this.origin);
 
             String line;
-            while ((line = reader.readLine()) != null && !this.isInputLimitExceeded()) {
+            while ((line = reader.readLine()) != null) {
                 if (!values.containsKey(line)) {
                     values.put(line, 0L);
                 }
@@ -176,14 +174,10 @@ public record MultiwayMergeSort(TPMMSConfiguration configuration) {
 
         }
 
-        private boolean isInputLimitExceeded() {
-            ++this.totalValues;
-            return this.configuration.getInputRowLimit() > 0 && this.totalValues > this.configuration.getInputRowLimit();
-        }
 
         private void maybeWriteSpillFile() throws IOException {
             ++this.valuesSinceLastMemoryCheck;
-            if (this.valuesSinceLastMemoryCheck > this.configuration.getMemoryCheckInterval() && this.shouldWriteSpillFile()) {
+            if (this.valuesSinceLastMemoryCheck > this.memoryCheckFrequency && this.shouldWriteSpillFile()) {
                 this.valuesSinceLastMemoryCheck = 0;
                 this.writeSpillFile();
             }
