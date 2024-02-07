@@ -24,6 +24,12 @@ public class Config {
     public String inputFileNullString = "";
     public boolean writeResults = true; // TODO: use this option
 
+    public DuplicateHandling duplicateHandling = DuplicateHandling.AWARE;
+    public NullHandling nullHandling = NullHandling.SUBSET;
+
+    public int maxMemoryPercent = 80;
+    public int memoryCheckFrequency = 100_000;
+
     public Config(Config.Dataset dataset, double threshold) {
         this.setDataset(dataset);
         this.threshold = threshold;
