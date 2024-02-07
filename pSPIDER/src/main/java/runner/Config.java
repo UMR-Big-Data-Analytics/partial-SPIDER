@@ -77,8 +77,11 @@ public class Config {
         TPCH_1, KAGGLE, DATA_GOV, UEFA
     }
 
-    // TODO: Add defined cases
     public enum NullHandling {
-        NULL_IS_SUBSET
+        SUBSET, FOREIGN, EQUALITY, INEQUALITY
+    }
+
+    public enum DuplicateHandling {
+        AWARE, UNAWARE
     }
 }
