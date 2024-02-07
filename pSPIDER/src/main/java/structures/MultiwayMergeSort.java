@@ -1,5 +1,7 @@
 package structures;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import runner.Config;
 
 import java.beans.ConstructorProperties;
@@ -127,6 +129,7 @@ public record MultiwayMergeSort(runner.Config configuration) {
         private final List<Path> spilledFiles;
         private final int memoryCheckFrequency;
         private int valuesSinceLastMemoryCheck;
+        private final Logger logger;
 
         private Execution(Config configuration, Path origin, Output output) {
             this.values = new TreeMap<>();
@@ -136,6 +139,9 @@ public record MultiwayMergeSort(runner.Config configuration) {
             this.origin = origin;
             this.memoryCheckFrequency = configuration.memoryCheckFrequency;
             this.maxMemoryUsage = getMaxMemoryUsage(configuration.maxMemoryPercent);
+            this.logger = LoggerFactory.getLogger(Execution.class);
+
+            logger.debug("Max Memory Usage set to: " + maxMemoryUsage + "bytes");
         }
 
         private static long getMaxMemoryUsage(int maxMemoryPercent) {
@@ -189,6 +195,7 @@ public record MultiwayMergeSort(runner.Config configuration) {
         }
 
         private void writeSpillFile() throws IOException {
+            logger.info("Spilling Attribute " + this.origin + " #" + this.spilledFiles.size());
             Path target = Paths.get(this.origin + "#" + this.spilledFiles.size());
             this.write(target, this.values);
             this.spilledFiles.add(target);

@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import lombok.Data;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -137,5 +138,6 @@ public class Attribute {
      */
     public void close() throws IOException {
         readPointer.close();
+        Files.delete(readPointer.path);
     }
 }

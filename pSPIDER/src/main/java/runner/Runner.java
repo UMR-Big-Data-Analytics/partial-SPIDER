@@ -1,7 +1,6 @@
 package runner;
 
 import core.Spider;
-import de.metanome.algorithm_integration.AlgorithmExecutionException;
 
 import java.io.IOException;
 
@@ -9,11 +8,12 @@ import java.io.IOException;
 // TODO: include some prints for progress tracking
 
 public class Runner {
-    public static void main(String[] args) throws AlgorithmExecutionException, IOException {
+    public static void main(String[] args) throws IOException {
 
-        Config config = new Config(Config.Dataset.DATA_GOV, 1);
+        Config config = new Config(Config.Dataset.TPCH_1, 1);
 
         Spider spider = new Spider(config);
+
         long startTime = System.currentTimeMillis();
         spider.execute();
         System.out.println("Execution Took: " + (System.currentTimeMillis() - startTime) + "ms");

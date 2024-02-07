@@ -45,7 +45,7 @@ public class Config {
             }
             case TPCH_1 -> {
                 this.databaseName = "TPCH_1\\";
-                this.tableNames = new String[]{"customer", "lineitem", "nation", "orders", "part", "region", "supplier"};
+                this.tableNames = new String[]{"customer", "lineitem", "nation", "orders", "part", "partsupp", "region", "supplier"};
                 this.separator = '|';
                 this.inputFileHasHeader = false;
                 this.fileEnding = ".tbl";
@@ -72,9 +72,8 @@ public class Config {
     public List<RelationalFileInput> getFileInputs() throws IOException {
         List<RelationalFileInput> fileInputGenerators = new ArrayList<>(tableNames.length);
         for (String tableName : tableNames) {
-            String relationName = databaseName + "." + tableName;
             String relationPath = folderPath + databaseName + File.separator + tableName + fileEnding;
-            fileInputGenerators.add(new RelationalFileInput(relationName, relationPath, this));
+            fileInputGenerators.add(new RelationalFileInput(tableName, relationPath, this));
         }
         return fileInputGenerators;
     }

@@ -1,8 +1,8 @@
 package io;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
 
@@ -10,9 +10,11 @@ public class ReadPointer implements Iterator<String> {
 
     private final BufferedReader reader;
     private String currentValue;
+    public final Path path;
 
-    ReadPointer(final BufferedReader reader) throws IOException {
-        this.reader = reader;
+    public ReadPointer(Path path) throws IOException {
+        this.path = path;
+        this.reader = new BufferedReader(new FileReader(String.valueOf(path)));
         currentValue = reader.readLine();
     }
 
@@ -40,7 +42,4 @@ public class ReadPointer implements Iterator<String> {
         reader.close();
     }
 
-    public static ReadPointer of(final Path path) throws IOException {
-        return new ReadPointer(Files.newBufferedReader(path));
-    }
 }

@@ -1,9 +1,8 @@
 package structures;
 
-import de.metanome.algorithm_integration.AlgorithmExecutionException;
-import de.metanome.util.TPMMSConfiguration;
 import io.ReadPointer;
 import io.RelationalFileInput;
+import runner.Config;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -16,22 +15,19 @@ import java.util.List;
 public class ExternalRepository {
 
     public long tableLength = 0;
+    public long[] nullCounts;
     private int count;
 
-    public ReadPointer[] uniqueAndSort(final TPMMSConfiguration configuration, RelationalFileInput table) throws AlgorithmExecutionException, IOException {
+    public ReadPointer[] uniqueAndSort(Config config, RelationalFileInput table) throws IOException {
         tableLength = 0;
         final Path[] paths = store(table);
         // can we get away without storing the tables to new files first?
-        try {
-            uniqueAndSort(paths, configuration);
-            return open(paths);
-        } catch (final IOException e) {
-            throw new AlgorithmExecutionException("MultiwayMergeSort failure", e);
-        }
+        uniqueAndSort(paths, config);
+        return open(paths);
+
     }
 
-    private void uniqueAndSort(final Path[] paths, final TPMMSConfiguration configuration)
-            throws IOException {
+    private void uniqueAndSort(final Path[] paths, final Config configuration) throws IOException {
 
         final MultiwayMergeSort multiwayMergeSort = new MultiwayMergeSort(configuration);
         for (final Path path : paths) {
@@ -39,31 +35,28 @@ public class ExternalRepository {
         }
     }
 
-    private Path[] store(RelationalFileInput table) throws AlgorithmExecutionException, IOException {
+    private Path[] store(RelationalFileInput table) throws IOException {
 
         final Path[] paths = new Path[table.numberOfColumns()];
         final BufferedWriter[] writers = new BufferedWriter[table.numberOfColumns()];
         openForWriting(paths, writers);
-        write(table, writers);
+        this.nullCounts = write(table, writers);
         close(writers);
         return paths;
     }
 
-    private void openForWriting(final Path[] paths, final BufferedWriter[] writers) throws AlgorithmExecutionException {
-        try {
-            for (int index = 0; index < paths.length; ++index) {
-                final Path path = getPath();
-                paths[index] = path;
-                writers[index] = Files.newBufferedWriter(path);
-            }
-        } catch (final IOException e) {
-            throw new AlgorithmExecutionException("cannot open file for writing", e);
+    private void openForWriting(final Path[] paths, final BufferedWriter[] writers) throws IOException {
+        for (int index = 0; index < paths.length; ++index) {
+            final Path path = getPath();
+            paths[index] = path;
+            writers[index] = Files.newBufferedWriter(path);
         }
+
     }
 
-    private void write(final RelationalFileInput file, final BufferedWriter[] writers)
-            throws AlgorithmExecutionException, IOException {
+    private long[] write(final RelationalFileInput file, final BufferedWriter[] writers) throws IOException {
 
+        long[] nullCounts = new long[writers.length];
         while (file.hasNext()) {
             tableLength++;
             final List<String> next = file.next();
@@ -72,41 +65,35 @@ public class ExternalRepository {
                 if (value != null) {
                     writers[index].write(escape(value));
                     writers[index].newLine();
+                } else {
+                    nullCounts[index]++;
                 }
             }
         }
+        return nullCounts;
     }
 
-    private void close(final Closeable[] toClose) throws AlgorithmExecutionException {
-        try {
-            for (final Closeable item : toClose) {
-                item.close();
-            }
-        } catch (final IOException e) {
-            throw new AlgorithmExecutionException("cannot close", e);
+    private void close(final Closeable[] toClose) throws IOException {
+        for (final Closeable item : toClose) {
+            item.close();
         }
     }
 
-    private ReadPointer[] open(final Path[] paths) throws AlgorithmExecutionException {
-
-        try {
-            final ReadPointer[] result = new ReadPointer[paths.length];
-            for (int index = 0; index < paths.length; index++) {
-                result[index] = ReadPointer.of(paths[index]);
-            }
-            return result;
-        } catch (final IOException e) {
-            throw new AlgorithmExecutionException("cannot open file for reading", e);
+    private ReadPointer[] open(final Path[] paths) throws IOException {
+        final ReadPointer[] result = new ReadPointer[paths.length];
+        for (int index = 0; index < paths.length; index++) {
+            result[index] = new ReadPointer(paths[index]);
         }
+        return result;
     }
 
     private String escape(final String value) {
         return value.replace('\n', '\0');
     }
 
-    private Path getPath() throws IOException {
+    private Path getPath() {
         this.count++;
-        File tempFile = new File(".\\temp\\temp_" + count + ".txt");
+        File tempFile = new File(".\\temp\\attribute_" + count + ".txt");
         return tempFile.toPath();
     }
 }
