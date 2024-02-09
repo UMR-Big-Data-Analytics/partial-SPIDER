@@ -27,6 +27,7 @@ public class RelationalFileInput {
 
     protected boolean hasHeader;
     protected boolean skipDifferingLines;
+    private final boolean tailingSeparator;
     protected String nullValue;
 
 
@@ -41,6 +42,7 @@ public class RelationalFileInput {
 
         this.CSVReader = new CSVReaderBuilder(reader).withCSVParser(new CSVParserBuilder().withSeparator(config.separator).withEscapeChar(config.fileEscape).withIgnoreLeadingWhiteSpace(config.ignoreLeadingWhiteSpace).withStrictQuotes(config.strictQuotes).withQuoteChar(config.quoteChar).build()).build();
 
+        this.tailingSeparator = config.tailingSeparator;
         // read the first line
         this.nextLine = readNextLine();
         if (this.nextLine != null) {
@@ -127,6 +129,7 @@ public class RelationalFileInput {
                 list.add(val);
             }
         }
+        if (tailingSeparator) list.remove(list.size()-1);
         // Return an immutable list
         return Collections.unmodifiableList(list);
     }

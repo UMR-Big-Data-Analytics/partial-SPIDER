@@ -8,7 +8,7 @@ import java.io.IOException;
 // TODO: include some prints for progress tracking
 
 public class Runner {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
 
         Config config = new Config(Config.Dataset.TPCH_1, 1);
 

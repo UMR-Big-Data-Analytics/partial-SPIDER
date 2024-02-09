@@ -4,14 +4,19 @@ import io.ReadPointer;
 import it.unimi.dsi.fastutil.ints.IntLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import lombok.Data;
+import runner.Config;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * An Attribute resembles a column. It manages its own dependent and referenced attributes.
+ */
 @Data
 public class Attribute {
 
@@ -19,30 +24,37 @@ public class Attribute {
     private final int id;
     private final String tableName;
     private final String columnName;
-    private final Map<Integer, Long> referenced;
-    private final IntSet dependent;
-    private final ReadPointer readPointer;
-    private final long nullCount;
+
+    private Map<Integer, Long> referenced;
+    private IntSet dependent;
+
+    private long size;
+    private long uniqueSize;
+    private long nullCount;
     private long violationsLeft;
+
+    private ReadPointer readPointer;
+    private Path path;
+
     private String currentValue;
     private Long currentOccurrences;
 
-    /**
-     * An Attribute resembles a column. It manages its own dependent and referenced attributes.
-     */
-    public Attribute(int id, String tableName, String columnName, long violationsLeft, long nullCount, ReadPointer readPointer) {
-
+    public Attribute(int id, Path attributePath, String tableName, long tableLength, String columnName, long nullCount) throws IOException {
         this.id = id;
-        this.readPointer = readPointer;
+        this.path = attributePath;
         this.tableName = tableName;
+        this.size = tableLength;
         this.columnName = columnName;
-        this.violationsLeft = violationsLeft;
         this.nullCount = nullCount;
-        this.dependent = new IntLinkedOpenHashSet();
+        this.dependent = new IntLinkedOpenHashSet(); //TODO: get rid of this
         this.referenced = new HashMap<>();
-        this.currentValue = readPointer.getCurrentValue();
-        if (readPointer.hasNext()) {
-            this.currentOccurrences = Long.parseLong(readPointer.next());
+    }
+
+    public void calculateViolations(Config config) {
+        if (config.duplicateHandling == Config.DuplicateHandling.AWARE) {
+            this.violationsLeft = (long) ((1.0 - config.threshold) * size);
+        } else {
+            this.violationsLeft = (long) ((1.0 - config.threshold) * uniqueSize);
         }
     }
 
@@ -105,7 +117,6 @@ public class Attribute {
      * @param attributeIndex The index that stores all attributes
      */
     public void intersectReferenced(Set<Integer> attributes, final Attribute[] attributeIndex) {
-        // TODO: adjust to respect pINDs
         Iterator<Integer> referencedIterator = referenced.keySet().iterator();
         while (referencedIterator.hasNext()) {
             final int ref = referencedIterator.next();
@@ -127,7 +138,6 @@ public class Attribute {
      * other attribute. Since it is irrelevant for pIND discovery now, it can be removed from the attribute queue.
      */
     public boolean isFinished() {
-
         return referenced.isEmpty() && dependent.isEmpty();
     }
 
@@ -139,5 +149,11 @@ public class Attribute {
     public void close() throws IOException {
         readPointer.close();
         Files.delete(readPointer.path);
+    }
+
+    public void open() throws IOException {
+        this.readPointer = new ReadPointer(path);
+        this.currentValue = readPointer.getCurrentValue();
+        if (readPointer.hasNext()) this.currentOccurrences = Long.parseLong(readPointer.next());
     }
 }

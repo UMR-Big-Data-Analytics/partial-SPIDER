@@ -19,6 +19,7 @@ public class Config {
     public char fileEscape = '\\';
     public boolean strictQuotes = false;
     public boolean ignoreLeadingWhiteSpace = true;
+    public boolean tailingSeparator = false;
     public boolean inputFileHasHeader = true;
     public boolean inputFileSkipDifferingLines = true; // Skip lines that differ from the dataset's schema
     public String inputFileNullString = "";
@@ -49,6 +50,7 @@ public class Config {
                 this.separator = '|';
                 this.inputFileHasHeader = false;
                 this.fileEnding = ".tbl";
+                this.tailingSeparator = true;
             }
             case DATA_GOV -> {
                 this.databaseName = "data.gov\\";

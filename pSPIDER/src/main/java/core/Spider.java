@@ -1,6 +1,6 @@
 package core;
 
-import io.ReadPointer;
+import io.MultiMergeRunner;
 import io.RelationalFileInput;
 import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -15,88 +15,129 @@ import structures.ExternalRepository;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.nio.file.Path;
+import java.util.*;
 
 public class Spider {
 
     private final Config config;
     private final ExternalRepository externalRepository;
-    private final double threshold;
+    private final Logger logger;
     private Attribute[] attributeIndex;
     private PriorityQueue<Attribute> priorityQueue;
-    private final Logger logger;
 
 
     public Spider(Config config) {
         this.config = config;
-        this.threshold = config.threshold;
         this.logger = LoggerFactory.getLogger(Spider.class);
         externalRepository = new ExternalRepository();
     }
 
 
-    public void execute() throws IOException {
+    public void execute() throws IOException, InterruptedException {
         logger.info("Starting Execution");
-        initializeAttributes(this.config.getFileInputs());
+        List<RelationalFileInput> tables = this.config.getFileInputs();
+        initializeAttributes(tables);
+
+        createAttributes(tables);
+
+        enqueueAttributes();
+
+        initializePINDs();
         calculateInclusionDependencies();
         int unaryINDs = collectResults();
         System.out.println("Unary INDs: " + unaryINDs);
         shutdown();
     }
 
-    private void initializeAttributes(final List<RelationalFileInput> tables) throws IOException {
+    /**
+     * Fetches the number of attributes and prepares the index as well as the priority queue
+     *
+     * @param tables Input Files
+     */
+    private void initializeAttributes(final List<RelationalFileInput> tables) {
         logger.info("Initializing Attributes");
         long sTime = System.currentTimeMillis();
 
-        final int columnCount = getTotalColumnCount(tables);
-        attributeIndex = new Attribute[columnCount];
-        priorityQueue = new ObjectHeapPriorityQueue<>(columnCount, this::compareAttributes);
-        createAndEnqueueAttributes(tables);
-        initializePINDs();
+        int numAttributes = getTotalColumnCount(tables);
+        logger.info("Found " + numAttributes + " attributes");
+        attributeIndex = new Attribute[numAttributes];
+        priorityQueue = new ObjectHeapPriorityQueue<>(numAttributes, this::compareAttributes);
 
         logger.info("Finished Initializing Attributes. Took: " + (System.currentTimeMillis() - sTime) + "ms");
+    }
+
+    /**
+     * Iterates over all tables and creates a file for each attribute. Closes the input readers.
+     *
+     * @param tables Input Files
+     * @throws IOException If a file could not be found
+     */
+    private void createAttributes(List<RelationalFileInput> tables) throws IOException {
+        logger.info("Creating attribute files");
+        long sTime = System.currentTimeMillis();
+
+        int id = 0;
+
+        for (RelationalFileInput table : tables) {
+            int tableCount = 0;
+            for (Path attributePath : externalRepository.store(table)) {
+                attributeIndex[id] = new Attribute(
+                        id,
+                        attributePath,
+                        table.relationName(),
+                        externalRepository.tableLength,
+                        table.headerLine.get(tableCount),
+                        externalRepository.nullCounts[tableCount]);
+                id++;
+                tableCount++;
+            }
+        }
+
+
         for (RelationalFileInput table : tables) {
             table.close();
         }
+        logger.info("Finished creating attribute Files. Took: " + (System.currentTimeMillis() - sTime) + "ms");
     }
 
-    private void createAndEnqueueAttributes(final List<RelationalFileInput> tables) throws IOException {
+    private void enqueueAttributes() throws InterruptedException {
 
-        int attributeId = 0;
-        for (RelationalFileInput table : tables) {
-            long sTime = System.currentTimeMillis();
-            logger.info("Starting table " + table.relationName());
+        Queue<Attribute> attributeQueue = new ArrayDeque<>(Arrays.asList(attributeIndex));
+        MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[8];
+        for (int i = 0; i < 4; i++) {
+            multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config);
+            multiMergeRunners[i].start();
+            Thread.sleep(100);
+        }
+        for (int i = 0; i < 4; i++) {
+            multiMergeRunners[i].join();
+        }
+        Thread.sleep(1000);
 
-            final Attribute[] attributes = getAttributes(table, attributeId);
-            attributeId += attributes.length;
-
-            for (final Attribute attribute : attributes) {
-                attributeIndex[attribute.getId()] = attribute;
-                if (attribute.getReadPointer().hasNext()) {
-                    priorityQueue.enqueue(attribute);
+        for (final Attribute attribute : attributeIndex) {
+            if (attribute.getReadPointer().hasNext()) {
+                priorityQueue.enqueue(attribute);
+            } else {
+                // The attribute is null in every entry
+                // Equality will never get here, since null is considered a value
+                if (config.nullHandling == Config.NullHandling.INEQUALITY) {
+                    // Inequality: Every Null is different form every other null
+                    // An attribute that only consists of null can not form any pIND regardless of the threshold.
+                    attribute.getDependent().clear();
+                    attribute.getReferenced().clear();
                 } else {
-                    // The attribute is null in every entry
-                    // Equality will never get here, since null is considered a value
-                    if (config.nullHandling == Config.NullHandling.INEQUALITY) {
-                        // Inequality: Every Null is different form every other null
-                        // An attribute that only consists of null can not form any pIND regardless of the threshold.
-                        attribute.getDependent().clear();
-                        attribute.getReferenced().clear();
-                    } else {
-                        // Subset: Attribute references everything
-                        // Another Pure-Null attribute could still be a reference
+                    // Subset: Attribute references everything
+                    // Another Pure-Null attribute could still be a reference
 
-                        // Foreign: Like Subset but referenced can not include null -> handled below
-                        attribute.getDependent().clear();
-                    }
+                    // Foreign: Like Subset but referenced can not include null -> handled below
+                    attribute.getDependent().clear();
                 }
             }
-            logger.info("Finished table " + table.relationName() + ". Took: " + (System.currentTimeMillis() - sTime) + "ms");
-
         }
+        // logger.info("Finished table " + table.relationName() + ". Took: " + (System.currentTimeMillis() - sTime) + "ms");
+
+
         // Handle Foreign constraints
         if (config.nullHandling == Config.NullHandling.FOREIGN) {
             for (Attribute attribute : attributeIndex) {
@@ -107,24 +148,6 @@ public class Spider {
                 }
             }
         }
-    }
-
-    private Attribute[] getAttributes(final RelationalFileInput table, int startIndex) throws IOException {
-
-        final ReadPointer[] readPointers = externalRepository.uniqueAndSort(config, table);
-        final Attribute[] attributes = new Attribute[table.numberOfColumns()];
-        long allowedViolations = (long) ((1.0 - threshold) * externalRepository.tableLength);
-        for (int index = 0; index < readPointers.length; ++index) {
-            attributes[index] = new Attribute(
-                    startIndex++,
-                    table.relationName(),
-                    table.headerLine.get(index),
-                    allowedViolations,
-                    externalRepository.nullCounts[index],
-                    readPointers[index]
-            );
-        }
-        return attributes;
     }
 
     private void initializePINDs() {

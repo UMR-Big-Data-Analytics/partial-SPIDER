@@ -18,24 +18,7 @@ public class ExternalRepository {
     public long[] nullCounts;
     private int count;
 
-    public ReadPointer[] uniqueAndSort(Config config, RelationalFileInput table) throws IOException {
-        tableLength = 0;
-        final Path[] paths = store(table);
-        // can we get away without storing the tables to new files first?
-        uniqueAndSort(paths, config);
-        return open(paths);
-
-    }
-
-    private void uniqueAndSort(final Path[] paths, final Config configuration) throws IOException {
-
-        final MultiwayMergeSort multiwayMergeSort = new MultiwayMergeSort(configuration);
-        for (final Path path : paths) {
-            multiwayMergeSort.uniqueAndSort(path);
-        }
-    }
-
-    private Path[] store(RelationalFileInput table) throws IOException {
+    public Path[] store(RelationalFileInput table) throws IOException {
 
         final Path[] paths = new Path[table.numberOfColumns()];
         final BufferedWriter[] writers = new BufferedWriter[table.numberOfColumns()];
@@ -57,6 +40,7 @@ public class ExternalRepository {
     private long[] write(final RelationalFileInput file, final BufferedWriter[] writers) throws IOException {
 
         long[] nullCounts = new long[writers.length];
+        tableLength = 0L;
         while (file.hasNext()) {
             tableLength++;
             final List<String> next = file.next();

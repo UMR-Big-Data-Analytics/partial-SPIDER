@@ -18,12 +18,10 @@ import java.util.*;
 
 public record MultiwayMergeSort(runner.Config configuration) {
 
-    public void uniqueAndSort(Path path) throws IOException {
-        this.uniqueAndSort(path, new MultiwayMergeSort.DefaultOutput());
-    }
 
-    public void uniqueAndSort(Path path, MultiwayMergeSort.Output output) throws IOException {
-        (new MultiwayMergeSort.Execution(configuration, path, output)).uniqueAndSort();
+    public void uniqueAndSort(Attribute attribute) throws IOException {
+
+        (new MultiwayMergeSort.Execution(configuration, attribute.getPath(), new MultiwayMergeSort.DefaultOutput())).uniqueAndSort(attribute);
     }
 
     public interface Output extends Closeable {
@@ -79,7 +77,7 @@ public record MultiwayMergeSort(runner.Config configuration) {
 
         }
 
-        private void merge(List<Path> files, Path to) throws IOException {
+        private void merge(List<Path> files, Path to, Attribute attribute) throws IOException {
             this.init(files);
             this.output.open(to);
 
@@ -91,6 +89,7 @@ public record MultiwayMergeSort(runner.Config configuration) {
                 if (previousValue != null && !previousValue.equals(current.getValue())) {
                     this.output.write(previousValue);
                     this.output.write(String.valueOf(occurrence));
+                    attribute.setUniqueSize(attribute.getUniqueSize()+1L);
                     occurrence = 0L;
                 }
                 occurrence += current.getOccurrence();
@@ -140,8 +139,6 @@ public record MultiwayMergeSort(runner.Config configuration) {
             this.memoryCheckFrequency = configuration.memoryCheckFrequency;
             this.maxMemoryUsage = getMaxMemoryUsage(configuration.maxMemoryPercent);
             this.logger = LoggerFactory.getLogger(Execution.class);
-
-            logger.debug("Max Memory Usage set to: " + maxMemoryUsage + "bytes");
         }
 
         private static long getMaxMemoryUsage(int maxMemoryPercent) {
@@ -149,19 +146,25 @@ public record MultiwayMergeSort(runner.Config configuration) {
             return (long) ((double) available * ((double) maxMemoryPercent / 100.0D));
         }
 
-        private void uniqueAndSort() throws IOException {
+        private void uniqueAndSort(Attribute attribute) throws IOException {
+            logger.info("Starting uniqueAndSort for: " + attribute.getId());
+            long sTime = System.currentTimeMillis();
+
             this.writeSpillFiles();
             if (this.spilledFiles.isEmpty()) {
+                attribute.setUniqueSize(this.values.size());
                 this.writeOutput();
             } else {
                 if (!this.values.isEmpty()) {
                     this.writeSpillFile();
                 }
 
-                (new MultiwayMergeSort.Merger(this.output)).merge(this.spilledFiles, this.origin);
+                (new MultiwayMergeSort.Merger(this.output)).merge(this.spilledFiles, this.origin, attribute);
             }
 
             this.removeSpillFiles();
+
+            logger.info("Finished uniqueAndSort for: " + attribute.getId() + ". Took: " + (System.currentTimeMillis() - sTime));
         }
 
         private void writeSpillFiles() throws IOException {
@@ -195,7 +198,7 @@ public record MultiwayMergeSort(runner.Config configuration) {
         }
 
         private void writeSpillFile() throws IOException {
-            logger.info("Spilling Attribute " + this.origin + " #" + this.spilledFiles.size());
+            logger.info("Spilling Attribute " + this.origin + "#" + this.spilledFiles.size());
             Path target = Paths.get(this.origin + "#" + this.spilledFiles.size());
             this.write(target, this.values);
             this.spilledFiles.add(target);
@@ -204,7 +207,7 @@ public record MultiwayMergeSort(runner.Config configuration) {
         }
 
         private void write(Path path, Map<String, Long> values) throws IOException {
-            BufferedWriter writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            BufferedWriter writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE);
 
             Iterator<Long> valueIterator = values.values().iterator();
             for (String key : values.keySet()) {
