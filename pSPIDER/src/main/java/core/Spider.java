@@ -104,13 +104,12 @@ public class Spider {
     private void enqueueAttributes() throws InterruptedException {
 
         Queue<Attribute> attributeQueue = new ArrayDeque<>(Arrays.asList(attributeIndex));
-        MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[8];
-        for (int i = 0; i < 6; i++) {
+        MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[config.numThreads];
+        for (int i = 0; i < config.numThreads; i++) {
             multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config);
             multiMergeRunners[i].start();
-            Thread.sleep(10);
         }
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < config.numThreads; i++) {
             multiMergeRunners[i].join();
         }
 

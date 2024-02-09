@@ -25,6 +25,8 @@ public class Config {
     public String inputFileNullString = "";
     public boolean writeResults = true; // TODO: use this option
 
+    public int numThreads = 6;
+
     public DuplicateHandling duplicateHandling = DuplicateHandling.AWARE;
     public NullHandling nullHandling = NullHandling.SUBSET;
 
