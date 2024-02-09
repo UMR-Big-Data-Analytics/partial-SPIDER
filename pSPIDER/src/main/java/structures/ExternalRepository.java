@@ -76,8 +76,8 @@ public class ExternalRepository {
     }
 
     private Path getPath() {
-        this.count++;
         File tempFile = new File(".\\temp\\attribute_" + count + ".txt");
+        this.count++;
         return tempFile.toPath();
     }
 }
