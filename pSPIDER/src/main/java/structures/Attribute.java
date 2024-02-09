@@ -58,6 +58,10 @@ public class Attribute {
         }
     }
 
+    public boolean equals(Attribute other) {
+        return currentValue.equals(other.currentValue);
+    }
+
     /**
      * Adds all dependent ids from the given Set to the internal dependent set.
      *

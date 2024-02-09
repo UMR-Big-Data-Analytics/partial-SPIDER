@@ -105,15 +105,14 @@ public class Spider {
 
         Queue<Attribute> attributeQueue = new ArrayDeque<>(Arrays.asList(attributeIndex));
         MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[8];
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config);
             multiMergeRunners[i].start();
-            Thread.sleep(100);
+            Thread.sleep(10);
         }
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 6; i++) {
             multiMergeRunners[i].join();
         }
-        Thread.sleep(1000);
 
         for (final Attribute attribute : attributeIndex) {
             if (attribute.getReadPointer().hasNext()) {
@@ -135,7 +134,6 @@ public class Spider {
                 }
             }
         }
-        // logger.info("Finished table " + table.relationName() + ". Took: " + (System.currentTimeMillis() - sTime) + "ms");
 
 
         // Handle Foreign constraints
@@ -201,7 +199,7 @@ public class Spider {
 
             final Attribute firstAttribute = priorityQueue.dequeue();
             topAttributes.put(firstAttribute.getId(), firstAttribute.getCurrentOccurrences());
-            while (!priorityQueue.isEmpty() && sameValue(priorityQueue.first(), firstAttribute)) {
+            while (!priorityQueue.isEmpty() && priorityQueue.first().equals(firstAttribute)) {
                 Attribute sameGroupAttribute = priorityQueue.dequeue();
                 topAttributes.put(sameGroupAttribute.getId(), sameGroupAttribute.getCurrentOccurrences());
             }
@@ -220,10 +218,6 @@ public class Spider {
             topAttributes.clear();
         }
         logger.info("Finished pIND calculation. Took: " + (System.currentTimeMillis() - sTime) + "ms");
-    }
-
-    private boolean sameValue(final Attribute a1, final Attribute a2) {
-        return Objects.equals(a1.getCurrentValue(), a2.getCurrentValue());
     }
 
     private int collectResults() throws IOException {
