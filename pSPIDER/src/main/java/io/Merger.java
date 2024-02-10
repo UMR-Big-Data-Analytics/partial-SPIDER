@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 public class Merger {
-    private BufferedWriter output;
     private PriorityQueue<Entry> headValues;
     private BufferedReader[] readers;
 
@@ -34,7 +33,7 @@ public class Merger {
 
     public void merge(List<Path> files, Path to, Attribute attribute) throws IOException {
         this.init(files);
-        this.output = Files.newBufferedWriter(to);
+        BufferedWriter output = Files.newBufferedWriter(to);
 
         String previousValue = null;
         long occurrence = 0L;
@@ -42,8 +41,10 @@ public class Merger {
         while (!this.headValues.isEmpty()) {
             Entry current = this.headValues.poll();
             if (previousValue != null && !previousValue.equals(current.getValue())) {
-                this.output.write(previousValue);
-                this.output.write(String.valueOf(occurrence));
+                output.write(previousValue);
+                output.newLine();
+                output.write(String.valueOf(occurrence));
+                output.newLine();
                 attribute.setUniqueSize(attribute.getUniqueSize() + 1L);
                 occurrence = 0L;
             }
@@ -58,8 +59,9 @@ public class Merger {
                 this.headValues.add(current);
             }
         }
-        this.output.close();
-        this.closeReaders();
+        output.flush();
+        output.close();
+        closeReaders();
 
     }
 
