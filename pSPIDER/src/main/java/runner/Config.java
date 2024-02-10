@@ -76,9 +76,12 @@ public class Config {
 
     public List<RelationalFileInput> getFileInputs() throws IOException {
         List<RelationalFileInput> fileInputGenerators = new ArrayList<>(tableNames.length);
+        int totalColumns = 0;
         for (String tableName : tableNames) {
             String relationPath = folderPath + databaseName + File.separator + tableName + fileEnding;
-            fileInputGenerators.add(new RelationalFileInput(tableName, relationPath, this));
+            RelationalFileInput fileInput = new RelationalFileInput(tableName, relationPath, this, totalColumns);
+            totalColumns += fileInput.numberOfColumns();
+            fileInputGenerators.add(fileInput);
         }
         return fileInputGenerators;
     }

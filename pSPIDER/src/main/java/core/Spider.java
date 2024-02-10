@@ -2,6 +2,7 @@ package core;
 
 import io.MultiMergeRunner;
 import io.RelationalFileInput;
+import io.RepositoryRunner;
 import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -10,18 +11,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import runner.Config;
 import structures.Attribute;
-import structures.ExternalRepository;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.*;
 
 public class Spider {
 
     private final Config config;
-    private final ExternalRepository externalRepository;
     private final Logger logger;
     private Attribute[] attributeIndex;
     private PriorityQueue<Attribute> priorityQueue;
@@ -30,7 +28,6 @@ public class Spider {
     public Spider(Config config) {
         this.config = config;
         this.logger = LoggerFactory.getLogger(Spider.class);
-        externalRepository = new ExternalRepository();
     }
 
 
@@ -56,7 +53,7 @@ public class Spider {
         calculateInclusionDependencies();
         pINDCalculation = System.currentTimeMillis() - pINDCalculation;
 
-        collectResults(initializingTime, enqueueTime, pINDInitialization,pINDCalculation);
+        collectResults(initializingTime, enqueueTime, pINDInitialization, pINDCalculation);
         shutdown();
     }
 
@@ -81,33 +78,21 @@ public class Spider {
      * Iterates over all tables and creates a file for each attribute. Closes the input readers.
      *
      * @param tables Input Files
-     * @throws IOException If a file could not be found
      */
-    private void createAttributes(List<RelationalFileInput> tables) throws IOException {
+    private void createAttributes(List<RelationalFileInput> tables) throws InterruptedException {
         logger.info("Creating attribute files");
         long sTime = System.currentTimeMillis();
 
-        int id = 0;
-
-        for (RelationalFileInput table : tables) {
-            int tableCount = 0;
-            for (Path attributePath : externalRepository.store(table)) {
-                attributeIndex[id] = new Attribute(
-                        id,
-                        attributePath,
-                        table.relationName(),
-                        externalRepository.tableLength,
-                        table.headerLine.get(tableCount),
-                        externalRepository.nullCounts[tableCount]);
-                id++;
-                tableCount++;
-            }
+        Queue<RelationalFileInput> inputQueue = new ArrayDeque<>(tables);
+        RepositoryRunner[] repositoryRunners = new RepositoryRunner[config.numThreads];
+        for (int i = 0; i < config.numThreads; i++) {
+            repositoryRunners[i] = new RepositoryRunner(inputQueue, attributeIndex);
+            repositoryRunners[i].start();
+        }
+        for (int i = 0; i < config.numThreads; i++) {
+            repositoryRunners[i].join();
         }
 
-
-        for (RelationalFileInput table : tables) {
-            table.close();
-        }
         logger.info("Finished creating attribute Files. Took: " + (System.currentTimeMillis() - sTime) + "ms");
     }
 

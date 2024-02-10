@@ -17,6 +17,7 @@ public class RelationalFileInput {
 
     protected static final String DEFAULT_HEADER_STRING = "column";
     public List<String> headerLine;
+    public int tableOffset;
     protected CSVReader CSVReader;
     protected List<String> nextLine;
     protected String relationName;
@@ -31,8 +32,9 @@ public class RelationalFileInput {
     protected String nullValue;
 
 
-    public RelationalFileInput(String relationName, String relationPath, Config config) throws IOException {
+    public RelationalFileInput(String relationName, String relationPath, Config config, int tableOffset) throws IOException {
         this.relationName = relationName;
+        this.tableOffset = tableOffset;
 
         this.hasHeader = config.inputFileHasHeader;
         this.skipDifferingLines = config.inputFileSkipDifferingLines;

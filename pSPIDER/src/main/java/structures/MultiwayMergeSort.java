@@ -68,15 +68,12 @@ public class MultiwayMergeSort {
 
         String line;
         while ((line = reader.readLine()) != null) {
-            if (!values.containsKey(line)) {
-                values.put(line, 0L);
+            if (1L == this.values.compute(line, (k, v) -> v == null ? 1L : v+1L)) {
+                this.maybeWriteSpillFile();
             }
-            this.values.put(line, values.get(line) + 1);
-            this.maybeWriteSpillFile();
         }
 
         reader.close();
-
     }
 
 

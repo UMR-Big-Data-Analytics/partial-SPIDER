@@ -30,7 +30,7 @@ public class Attribute {
 
     private long size;
     private long uniqueSize;
-    private long nullCount;
+    private long nullCount = 0L;
     private long violationsLeft;
 
     private ReadPointer readPointer;
@@ -39,13 +39,11 @@ public class Attribute {
     private String currentValue;
     private Long currentOccurrences;
 
-    public Attribute(int id, Path attributePath, String tableName, long tableLength, String columnName, long nullCount) throws IOException {
+    public Attribute(int id, Path attributePath, String tableName, String columnName) {
         this.id = id;
         this.path = attributePath;
         this.tableName = tableName;
-        this.size = tableLength;
         this.columnName = columnName;
-        this.nullCount = nullCount;
         this.dependent = new IntLinkedOpenHashSet(); //TODO: get rid of this
         this.referenced = new HashMap<>();
     }
@@ -159,5 +157,9 @@ public class Attribute {
         this.readPointer = new ReadPointer(path);
         this.currentValue = readPointer.getCurrentValue();
         if (readPointer.hasNext()) this.currentOccurrences = Long.parseLong(readPointer.next());
+    }
+
+    public void incNullCount() {
+        this.nullCount++;
     }
 }
