@@ -37,16 +37,26 @@ public class Spider {
     public void execute() throws IOException, InterruptedException {
         logger.info("Starting Execution");
         List<RelationalFileInput> tables = this.config.getFileInputs();
+
         initializeAttributes(tables);
 
+        long initializingTime = System.currentTimeMillis();
         createAttributes(tables);
+        initializingTime = System.currentTimeMillis() - initializingTime;
 
+        long enqueueTime = System.currentTimeMillis();
         enqueueAttributes();
+        enqueueTime = System.currentTimeMillis() - enqueueTime;
 
+        long pINDInitialization = System.currentTimeMillis();
         initializePINDs();
+        pINDInitialization = System.currentTimeMillis() - pINDInitialization;
+
+        long pINDCalculation = System.currentTimeMillis();
         calculateInclusionDependencies();
-        int unaryINDs = collectResults();
-        System.out.println("Unary INDs: " + unaryINDs);
+        pINDCalculation = System.currentTimeMillis() - pINDCalculation;
+
+        collectResults(initializingTime, enqueueTime, pINDInitialization,pINDCalculation);
         shutdown();
     }
 
@@ -101,7 +111,7 @@ public class Spider {
         logger.info("Finished creating attribute Files. Took: " + (System.currentTimeMillis() - sTime) + "ms");
     }
 
-    private void enqueueAttributes() throws InterruptedException {
+    private void enqueueAttributes() throws InterruptedException, IOException {
 
         Queue<Attribute> attributeQueue = new ArrayDeque<>(Arrays.asList(attributeIndex));
         MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[config.numThreads];
@@ -114,6 +124,7 @@ public class Spider {
         }
 
         for (final Attribute attribute : attributeIndex) {
+            attribute.open();
             if (attribute.getReadPointer().hasNext()) {
                 priorityQueue.enqueue(attribute);
             } else {
@@ -219,15 +230,10 @@ public class Spider {
         logger.info("Finished pIND calculation. Took: " + (System.currentTimeMillis() - sTime) + "ms");
     }
 
-    private int collectResults() throws IOException {
+    private void collectResults(long init, long enqueue, long pINDCreation, long pINDValidation) throws IOException {
         int numUnary = 0;
-        BufferedWriter bw = null;
-        try {
-            bw = new BufferedWriter(new FileWriter(".\\results\\INDS.txt"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        assert bw != null;
+        BufferedWriter bw = new BufferedWriter(new FileWriter(".\\results\\" + config.executionName + "_pINDs.txt"));
+
         for (final Attribute dep : attributeIndex) {
 
             if (dep.getReferenced().isEmpty()) {
@@ -247,7 +253,24 @@ public class Spider {
         }
         bw.flush();
         bw.close();
-        return numUnary;
+
+        // TODO: log num spills
+        bw = new BufferedWriter(new FileWriter(".\\results\\" + config.executionName + "_statistics.json"));
+        // build a json file
+        bw.write('{');
+        bw.write("\"database\": \"" + config.databaseName + "\",");
+        bw.write("\"threads\": " + config.numThreads + ",");
+        bw.write("\"pINDs\": " + numUnary + ",");
+        bw.write("\"threshold\": " + config.threshold + ",");
+        bw.write("\"nullHandling\": \"" + config.nullHandling + "\",");
+        bw.write("\"duplicateHandling\": \"" + config.duplicateHandling + "\",");
+        bw.write("\"initialization\": " + init + ",");
+        bw.write("\"enqueue\": " + enqueue + ",");
+        bw.write("\"pINDCreation\": " + pINDCreation + ",");
+        bw.write("\"pINDValidation\": " + pINDValidation);
+        bw.write('}');
+        bw.flush();
+        bw.close();
     }
 
     private void shutdown() throws IOException {

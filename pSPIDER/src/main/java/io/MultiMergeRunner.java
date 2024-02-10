@@ -38,11 +38,6 @@ public class MultiMergeRunner extends Thread {
                 e.printStackTrace();
             }
             attribute.calculateViolations(config);
-            try {
-                attribute.open();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
         }
     }
 }
