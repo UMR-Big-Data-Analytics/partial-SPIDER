@@ -8,6 +8,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
+public
 class Entry implements Comparable<Entry> {
 
     private final int readerNumber;
@@ -22,7 +23,7 @@ class Entry implements Comparable<Entry> {
      * @param occurrence   The number of occurrences within the attribute.
      * @param readerNumber The id of the reader, that read the value.
      */
-    Entry(final String value, long occurrence, final int readerNumber) {
+    public Entry(final String value, long occurrence, final int readerNumber) {
         this.value = value;
         this.occurrence = occurrence;
         this.readerNumber = readerNumber;

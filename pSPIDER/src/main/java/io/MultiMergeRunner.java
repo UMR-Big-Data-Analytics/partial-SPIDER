@@ -28,12 +28,12 @@ public class MultiMergeRunner extends Thread {
      * While there are attributes left to be processed, the Thread polls the next in queue and processes it.
      */
     public void run() {
-        MultiwayMergeSort multiwayMergeSort = new MultiwayMergeSort(config);
         while (!attributeQueue.isEmpty()) {
             Attribute attribute = attributeQueue.poll();
             if (attribute == null) continue;
+            MultiwayMergeSort multiwayMergeSort = new MultiwayMergeSort(config, attribute);
             try {
-                multiwayMergeSort.uniqueAndSort(attribute);
+                multiwayMergeSort.sort();
             } catch (IOException e) {
                 e.printStackTrace();
             }

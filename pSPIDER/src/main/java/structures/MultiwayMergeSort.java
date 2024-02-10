@@ -1,13 +1,12 @@
 package structures;
 
+import io.Merger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import runner.Config;
 
-import java.beans.ConstructorProperties;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.Closeable;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
@@ -16,233 +15,132 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 
-public record MultiwayMergeSort(runner.Config configuration) {
+public class MultiwayMergeSort {
 
+    private final Path origin;
+    private final long maxMemoryUsage;
+    private final Map<String, Long> values;
+    private final List<Path> spilledFiles;
+    private final int memoryCheckFrequency;
+    private final Logger logger;
+    private final Attribute attribute;
+    private int valuesSinceLastMemoryCheck;
 
-    public void uniqueAndSort(Attribute attribute) throws IOException {
-
-        (new MultiwayMergeSort.Execution(configuration, attribute.getPath(), new MultiwayMergeSort.DefaultOutput())).uniqueAndSort(attribute);
+    public MultiwayMergeSort(Config config, Attribute attribute) {
+        this.values = new TreeMap<>();
+        this.attribute = attribute;
+        this.spilledFiles = new ArrayList<>();
+        this.valuesSinceLastMemoryCheck = 0;
+        this.origin = attribute.getPath();
+        this.memoryCheckFrequency = config.memoryCheckFrequency;
+        this.maxMemoryUsage = getMaxMemoryUsage(config.maxMemoryPercent);
+        this.logger = LoggerFactory.getLogger(MultiwayMergeSort.class);
     }
 
-    public interface Output extends Closeable {
-        void open(Path var1) throws IOException;
-
-        void write(String var1) throws IOException;
+    private static long getMaxMemoryUsage(int maxMemoryPercent) {
+        long available = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+        return (long) ((double) available * ((double) maxMemoryPercent / 100.0D));
     }
 
-    private static class DefaultOutput implements MultiwayMergeSort.Output {
-        private BufferedWriter writer;
+    public void sort() throws IOException {
+        logger.info("Starting sort for: " + attribute.getId());
+        long sTime = System.currentTimeMillis();
 
-        private DefaultOutput() {
-        }
-
-        public void open(Path to) throws IOException {
-            this.writer = Files.newBufferedWriter(to, StandardOpenOption.TRUNCATE_EXISTING);
-        }
-
-        public void write(String value) throws IOException {
-            this.writer.write(value);
-            this.writer.newLine();
-        }
-
-        public void close() throws IOException {
-            this.writer.flush();
-            this.writer.close();
-        }
-    }
-
-    private static class Merger {
-        private final MultiwayMergeSort.Output output;
-        private PriorityQueue<Entry> topFileValues;
-        private BufferedReader[] readers;
-
-        @ConstructorProperties({"output"})
-        public Merger(MultiwayMergeSort.Output output) {
-            this.output = output;
-        }
-
-        private void init(List<Path> files) throws IOException {
-            this.topFileValues = new PriorityQueue<>(files.size());
-            this.readers = new BufferedReader[files.size()];
-
-            for (int index = 0; index < files.size(); ++index) {
-                BufferedReader reader = Files.newBufferedReader(files.get(index));
-                this.readers[index] = reader;
-                String firstLine = reader.readLine();
-                if (firstLine != null) {
-                    long occurrence = Long.parseLong(reader.readLine());
-                    this.topFileValues.add(new Entry(firstLine, occurrence, index));
-                }
-            }
-
-        }
-
-        private void merge(List<Path> files, Path to, Attribute attribute) throws IOException {
-            this.init(files);
-            this.output.open(to);
-
-            String previousValue = null;
-            long occurrence = 0L;
-
-            while (!this.topFileValues.isEmpty()) {
-                Entry current = this.topFileValues.poll();
-                if (previousValue != null && !previousValue.equals(current.getValue())) {
-                    this.output.write(previousValue);
-                    this.output.write(String.valueOf(occurrence));
-                    attribute.setUniqueSize(attribute.getUniqueSize()+1L);
-                    occurrence = 0L;
-                }
-                occurrence += current.getOccurrence();
-                previousValue = current.getValue();
-
-                String nextValue = this.readers[current.getReaderNumber()].readLine();
-                if (nextValue != null) {
-                    long nextOccurrence = Long.parseLong(this.readers[current.getReaderNumber()].readLine());
-                    current.setValue(nextValue);
-                    current.setOccurrence(nextOccurrence);
-                    this.topFileValues.add(current);
-                }
-            }
-            this.output.close();
-            this.closeReaders();
-
-        }
-
-        private void closeReaders() throws IOException {
-            BufferedReader[] readers = this.readers;
-
-            for (BufferedReader reader : readers) {
-                if (reader != null) {
-                    reader.close();
-                }
-            }
-
-        }
-    }
-
-    private static class Execution {
-        private final MultiwayMergeSort.Output output;
-        private final Path origin;
-        private final long maxMemoryUsage;
-        private final Map<String, Long> values;
-        private final List<Path> spilledFiles;
-        private final int memoryCheckFrequency;
-        private int valuesSinceLastMemoryCheck;
-        private final Logger logger;
-
-        private Execution(Config configuration, Path origin, Output output) {
-            this.values = new TreeMap<>();
-            this.spilledFiles = new ArrayList<>();
-            this.valuesSinceLastMemoryCheck = 0;
-            this.output = output;
-            this.origin = origin;
-            this.memoryCheckFrequency = configuration.memoryCheckFrequency;
-            this.maxMemoryUsage = getMaxMemoryUsage(configuration.maxMemoryPercent);
-            this.logger = LoggerFactory.getLogger(Execution.class);
-        }
-
-        private static long getMaxMemoryUsage(int maxMemoryPercent) {
-            long available = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-            return (long) ((double) available * ((double) maxMemoryPercent / 100.0D));
-        }
-
-        private void uniqueAndSort(Attribute attribute) throws IOException {
-            logger.info("Starting uniqueAndSort for: " + attribute.getId());
-            long sTime = System.currentTimeMillis();
-
-            this.writeSpillFiles();
-            if (this.spilledFiles.isEmpty()) {
-                attribute.setUniqueSize(this.values.size());
-                this.writeOutput();
-            } else {
-                if (!this.values.isEmpty()) {
-                    this.writeSpillFile();
-                }
-
-                (new MultiwayMergeSort.Merger(this.output)).merge(this.spilledFiles, this.origin, attribute);
-            }
-
-            this.removeSpillFiles();
-
-            logger.info("Finished uniqueAndSort for: " + attribute.getId() + ". Took: " + (System.currentTimeMillis() - sTime));
-        }
-
-        private void writeSpillFiles() throws IOException {
-            BufferedReader reader = Files.newBufferedReader(this.origin);
-
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (!values.containsKey(line)) {
-                    values.put(line, 0L);
-                }
-                this.values.put(line, values.get(line) + 1);
-                this.maybeWriteSpillFile();
-            }
-
-            reader.close();
-
-        }
-
-
-        private void maybeWriteSpillFile() throws IOException {
-            ++this.valuesSinceLastMemoryCheck;
-            if (this.valuesSinceLastMemoryCheck > this.memoryCheckFrequency && this.shouldWriteSpillFile()) {
-                this.valuesSinceLastMemoryCheck = 0;
+        this.writeSpillFiles();
+        if (this.spilledFiles.isEmpty()) {
+            attribute.setUniqueSize(this.values.size());
+            this.writeOutput();
+        } else {
+            if (!this.values.isEmpty()) {
                 this.writeSpillFile();
             }
-
+            Merger spilledMerger = new Merger();
+            spilledMerger.merge(this.spilledFiles, this.origin, attribute);
         }
 
-        private boolean shouldWriteSpillFile() {
-            return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() > this.maxMemoryUsage;
-        }
+        this.removeSpillFiles();
 
-        private void writeSpillFile() throws IOException {
-            logger.info("Spilling Attribute " + this.origin + "#" + this.spilledFiles.size());
-            Path target = Paths.get(this.origin + "#" + this.spilledFiles.size());
-            this.write(target, this.values);
-            this.spilledFiles.add(target);
-            this.values.clear();
-            System.gc();
-        }
+        logger.info("Finished sort for: " + attribute.getId() + ". Took: " + (System.currentTimeMillis() - sTime));
+    }
 
-        private void write(Path path, Map<String, Long> values) throws IOException {
-            BufferedWriter writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE);
+    private void writeSpillFiles() throws IOException {
+        BufferedReader reader = Files.newBufferedReader(this.origin);
 
-            Iterator<Long> valueIterator = values.values().iterator();
-            for (String key : values.keySet()) {
-                writer.write(key);
-                writer.newLine();
-                writer.write(valueIterator.next().toString());
-                writer.newLine();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            if (!values.containsKey(line)) {
+                values.put(line, 0L);
             }
-            writer.flush();
-            writer.close();
+            this.values.put(line, values.get(line) + 1);
+            this.maybeWriteSpillFile();
         }
 
-        private void writeOutput() throws IOException {
-            this.output.open(this.origin);
+        reader.close();
 
-            Iterator<Long> valueIterator = this.values.values().iterator();
+    }
 
-            for (String key : values.keySet()) {
-                this.output.write(key);
-                this.output.write(valueIterator.next().toString());
+
+    private void maybeWriteSpillFile() throws IOException {
+        ++this.valuesSinceLastMemoryCheck;
+        if (this.valuesSinceLastMemoryCheck > this.memoryCheckFrequency && this.shouldWriteSpillFile()) {
+            this.valuesSinceLastMemoryCheck = 0;
+            this.writeSpillFile();
+        }
+
+    }
+
+    private boolean shouldWriteSpillFile() {
+        return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() > this.maxMemoryUsage;
+    }
+
+    private void writeSpillFile() throws IOException {
+        logger.info("Spilling Attribute " + this.origin + "#" + this.spilledFiles.size());
+        Path target = Paths.get(this.origin + "#" + this.spilledFiles.size());
+        this.write(target, this.values);
+        this.spilledFiles.add(target);
+        this.values.clear();
+        System.gc();
+    }
+
+    private void write(Path path, Map<String, Long> values) throws IOException {
+        BufferedWriter writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE);
+
+        Iterator<Long> valueIterator = values.values().iterator();
+        for (String key : values.keySet()) {
+            writer.write(key);
+            writer.newLine();
+            writer.write(valueIterator.next().toString());
+            writer.newLine();
+        }
+        writer.flush();
+        writer.close();
+    }
+
+    private void writeOutput() throws IOException {
+        BufferedWriter output = Files.newBufferedWriter(this.origin);
+
+        Iterator<Long> valueIterator = this.values.values().iterator();
+
+        for (String key : values.keySet()) {
+            output.write(key);
+            output.newLine();
+            output.write(valueIterator.next().toString());
+            output.newLine();
+        }
+        output.flush();
+        output.close();
+    }
+
+    private void removeSpillFiles() {
+        spilledFiles.forEach(x -> {
+            try {
+                Files.delete(x);
+            } catch (IOException e) {
+                System.out.println("Unable to delete file: " + x);
+                e.printStackTrace();
             }
-            this.output.close();
-        }
+        });
 
-        private void removeSpillFiles() {
-            spilledFiles.forEach(x -> {
-                try {
-                    Files.delete(x);
-                } catch (IOException e) {
-                    System.out.println("Unable to delete file: " + x);
-                    e.printStackTrace();
-                }
-            });
-
-            this.spilledFiles.clear();
-        }
+        this.spilledFiles.clear();
     }
 }
