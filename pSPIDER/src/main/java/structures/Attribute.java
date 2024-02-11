@@ -24,6 +24,7 @@ public class Attribute {
     private final int id;
     private final String tableName;
     private final String columnName;
+    public int spilledFiles;
 
     private Map<Integer, Long> referenced;
     private IntSet dependent;
@@ -58,6 +59,16 @@ public class Attribute {
 
     public boolean equals(Attribute other) {
         return currentValue.equals(other.currentValue);
+    }
+
+    public int compareBySize(Attribute other) {
+        if (this.size > other.getSize()) {
+            return -1;
+        } else if (this.size == other.size) {
+            return 0;
+        } else {
+            return 1;
+        }
     }
 
     /**

@@ -16,6 +16,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Spider {
 
@@ -98,7 +99,7 @@ public class Spider {
 
     private void enqueueAttributes() throws InterruptedException, IOException {
 
-        Queue<Attribute> attributeQueue = new ArrayDeque<>(Arrays.asList(attributeIndex));
+        Queue<Attribute> attributeQueue = Arrays.stream(attributeIndex).sorted(Attribute::compareBySize).collect(Collectors.toCollection(ArrayDeque::new));
         MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[config.numThreads];
         for (int i = 0; i < config.numThreads; i++) {
             multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config);
@@ -252,7 +253,8 @@ public class Spider {
         bw.write("\"initialization\": " + init + ",");
         bw.write("\"enqueue\": " + enqueue + ",");
         bw.write("\"pINDCreation\": " + pINDCreation + ",");
-        bw.write("\"pINDValidation\": " + pINDValidation);
+        bw.write("\"pINDValidation\": " + pINDValidation + ",");
+        bw.write("\"spilledFiles\": " + Arrays.stream(attributeIndex).mapToInt(Attribute::getSpilledFiles).sum());
         bw.write('}');
         bw.flush();
         bw.close();

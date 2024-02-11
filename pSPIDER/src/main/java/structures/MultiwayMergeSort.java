@@ -58,6 +58,7 @@ public class MultiwayMergeSort {
             spilledMerger.merge(this.spilledFiles, this.origin, attribute);
         }
 
+        attribute.spilledFiles = spilledFiles.size();
         this.removeSpillFiles();
 
         logger.info("Finished sort for: " + attribute.getId() + ". Took: " + (System.currentTimeMillis() - sTime));

@@ -12,7 +12,7 @@ public class Config {
     public final double threshold;
     public String databaseName;
     public String[] tableNames;
-    public String folderPath = "M:\\MA\\data" + File.separator;
+    public String folderPath = "D:\\MA\\data" + File.separator;
     public String fileEnding = ".csv";
     public char separator = ',';
     public char quoteChar = '\"';
