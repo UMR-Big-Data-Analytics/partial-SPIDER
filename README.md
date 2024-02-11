@@ -7,11 +7,19 @@ The authors propose a counting approach for the first version which only affects
 
 My implementation solves this issue by treating the number of occurrences as an essential part of any entry. This enables us to answer both versions of the question through the same concept.
 
+## Hardware
+To set the numbers I state below, it is important to clarify the hardware used.
+- CPU: AMD Ryzan 5 3600X
+- RAM: 4x8GB 1600MHz DDR4
+- OS: Windows 10 Pro
+- Storage: Samsung 850 EVO SSD
+
 ## Advantages of this implementation
 The original implementation of Bauckmann appears to be lost. This causes me to use the implementation offered by Dürsch et al. through their paper [Inclusion Dependency Discovery: An Experimental Evaluation of Thirteen Algorithms](https://hpi.de/fileadmin/user_upload/fachgebiete/naumann/publications/PDFs/2019_duersch_inclusion.pdf). The code for their SPIDER implementation can be found [on github](https://github.com/HPI-Information-Systems/inclusion-dependency-algorithms/tree/master/adp-algorithms/spider).
 
 ### Something about algo runtime
 
+Averaging the execution time of the implementation of Dürsch et al. from 10 executions for the TCP-H dataset (1GB) yields a time of 131.95 seconds. This will be used as a baseline for further claims.
 TODO: compare runtime
 TODO: Make plot
 
