@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class MultiwayMergeSort {
 
@@ -24,10 +25,11 @@ public class MultiwayMergeSort {
     private final int memoryCheckFrequency;
     private final Logger logger;
     private final Attribute attribute;
+    private final int stringLimit;
     private int valuesSinceLastMemoryCheck;
 
-    public MultiwayMergeSort(Config config, Attribute attribute) {
-        this.values = new TreeMap<>();
+    public MultiwayMergeSort(Config config, Attribute attribute, int stringLimit) {
+        this.values = new HashMap<>((int) (stringLimit*1.05));
         this.attribute = attribute;
         this.spilledFiles = new ArrayList<>();
         this.valuesSinceLastMemoryCheck = 0;
@@ -35,6 +37,7 @@ public class MultiwayMergeSort {
         this.memoryCheckFrequency = config.memoryCheckFrequency;
         this.maxMemoryUsage = getMaxMemoryUsage(config.maxMemoryPercent);
         this.logger = LoggerFactory.getLogger(MultiwayMergeSort.class);
+        this.stringLimit = stringLimit;
     }
 
     private static long getMaxMemoryUsage(int maxMemoryPercent) {
@@ -49,7 +52,7 @@ public class MultiwayMergeSort {
         this.writeSpillFiles();
         if (this.spilledFiles.isEmpty()) {
             attribute.setUniqueSize(this.values.size());
-            this.writeOutput();
+            this.write(origin);
         } else {
             if (!this.values.isEmpty()) {
                 this.writeSpillFile();
@@ -80,53 +83,32 @@ public class MultiwayMergeSort {
 
     private void maybeWriteSpillFile() throws IOException {
         ++this.valuesSinceLastMemoryCheck;
-        if (this.valuesSinceLastMemoryCheck > this.memoryCheckFrequency && this.shouldWriteSpillFile()) {
+        if (this.valuesSinceLastMemoryCheck > this.stringLimit) {
             this.valuesSinceLastMemoryCheck = 0;
             this.writeSpillFile();
         }
 
     }
 
-    private boolean shouldWriteSpillFile() {
-        return ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() > this.maxMemoryUsage;
-    }
-
     private void writeSpillFile() throws IOException {
         logger.info("Spilling Attribute " + this.origin + "#" + this.spilledFiles.size());
         Path target = Paths.get(this.origin + "#" + this.spilledFiles.size());
-        this.write(target, this.values);
+        this.write(target);
         this.spilledFiles.add(target);
         this.values.clear();
-        System.gc();
     }
 
-    private void write(Path path, Map<String, Long> values) throws IOException {
+    private void write(Path path) throws IOException {
         BufferedWriter writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
-        Iterator<Long> valueIterator = values.values().iterator();
-        for (String key : values.keySet()) {
+        for (String key : values.keySet().stream().sorted().toList()) {
             writer.write(key);
             writer.newLine();
-            writer.write(valueIterator.next().toString());
+            writer.write(values.get(key).toString());
             writer.newLine();
         }
         writer.flush();
         writer.close();
-    }
-
-    private void writeOutput() throws IOException {
-        BufferedWriter output = Files.newBufferedWriter(this.origin);
-
-        Iterator<Long> valueIterator = this.values.values().iterator();
-
-        for (String key : values.keySet()) {
-            output.write(key);
-            output.newLine();
-            output.write(valueIterator.next().toString());
-            output.newLine();
-        }
-        output.flush();
-        output.close();
     }
 
     private void removeSpillFiles() {

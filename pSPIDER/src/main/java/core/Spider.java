@@ -13,6 +13,8 @@ import structures.Attribute;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -98,9 +100,17 @@ public class Spider {
     private void enqueueAttributes() throws InterruptedException, IOException {
 
         Queue<Attribute> attributeQueue = Arrays.stream(attributeIndex).sorted(Attribute::compareBySize).collect(Collectors.toCollection(ArrayDeque::new));
+        System.gc();
+        MemoryUsage memoryUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        long available = memoryUsage.getMax() - memoryUsage.getUsed();
+        // we estimate 100 Bytes per String
+        long threadStringLimit = (available / config.numThreads) / 400;
+
+        System.out.println(threadStringLimit);
+
         MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[config.numThreads];
         for (int i = 0; i < config.numThreads; i++) {
-            multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config);
+            multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config, threadStringLimit);
             multiMergeRunners[i].start();
         }
         for (int i = 0; i < config.numThreads; i++) {

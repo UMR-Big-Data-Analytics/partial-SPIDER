@@ -11,8 +11,8 @@ public class Runner {
     public static void main(String[] args) throws IOException, InterruptedException {
 
         Config.Dataset[] datasets = new Config.Dataset[]{Config.Dataset.TPCH_1};
-        int[] threads = new int[]{1, 4, 12};
-        int[] maxMemory = new int[]{90, 50, 25, 5, 1};
+        int[] threads = new int[]{12};
+        int[] maxMemory = new int[]{1_000_000, 400_000, 200_000, 100_000, 50_000, 10_000};
 
         for (Config.Dataset dataset : datasets) {
             for (int thread : threads) {
