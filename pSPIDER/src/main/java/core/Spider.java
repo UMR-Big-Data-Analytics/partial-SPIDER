@@ -3,10 +3,8 @@ package core;
 import io.MultiMergeRunner;
 import io.RelationalFileInput;
 import io.RepositoryRunner;
-import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import runner.Config;
@@ -70,7 +68,7 @@ public class Spider {
         int numAttributes = getTotalColumnCount(tables);
         logger.info("Found " + numAttributes + " attributes");
         attributeIndex = new Attribute[numAttributes];
-        priorityQueue = new ObjectHeapPriorityQueue<>(numAttributes, this::compareAttributes);
+        priorityQueue = new PriorityQueue<>(numAttributes, this::compareAttributes);
 
         logger.info("Finished Initializing Attributes. Took: " + (System.currentTimeMillis() - sTime) + "ms");
     }
@@ -112,7 +110,7 @@ public class Spider {
         for (final Attribute attribute : attributeIndex) {
             attribute.open();
             if (attribute.getReadPointer().hasNext()) {
-                priorityQueue.enqueue(attribute);
+                priorityQueue.add(attribute);
             } else {
                 // The attribute is null in every entry
                 // Equality will never get here, since null is considered a value
@@ -168,7 +166,7 @@ public class Spider {
 
     private int compareAttributes(final Attribute a1, final Attribute a2) {
         if (a1.getCurrentValue() == null && a2.getCurrentValue() == null) {
-            return Integer.compare(a1.getId(), a2.getId());
+            return 0;
         }
 
         if (a1.getCurrentValue() == null) {
@@ -179,11 +177,7 @@ public class Spider {
             return -1;
         }
 
-        final int order = a1.getCurrentValue().compareTo(a2.getCurrentValue());
-        if (order == 0) {
-            return Integer.compare(a1.getId(), a2.getId());
-        }
-        return order;
+        return a1.getCurrentValue().compareTo(a2.getCurrentValue());
     }
 
     private void calculateInclusionDependencies() {
@@ -193,10 +187,10 @@ public class Spider {
         Map<Integer, Long> topAttributes = new HashMap<>();
         while (!priorityQueue.isEmpty()) {
 
-            final Attribute firstAttribute = priorityQueue.dequeue();
+            final Attribute firstAttribute = priorityQueue.poll();
             topAttributes.put(firstAttribute.getId(), firstAttribute.getCurrentOccurrences());
-            while (!priorityQueue.isEmpty() && priorityQueue.first().equals(firstAttribute)) {
-                Attribute sameGroupAttribute = priorityQueue.dequeue();
+            while (!priorityQueue.isEmpty() && priorityQueue.peek().equals(firstAttribute)) {
+                Attribute sameGroupAttribute = priorityQueue.poll();
                 topAttributes.put(sameGroupAttribute.getId(), sameGroupAttribute.getCurrentOccurrences());
             }
 
@@ -204,10 +198,21 @@ public class Spider {
                 attributeIndex[topAttribute].intersectReferenced(topAttributes.keySet(), attributeIndex);
             }
 
-            for (int topAttribute : topAttributes.keySet()) {
-                final Attribute attribute = attributeIndex[topAttribute];
-                if (attribute.nextValue() && !attribute.isFinished()) {
-                    priorityQueue.enqueue(attribute);
+            if (topAttributes.size() == 1 && !priorityQueue.isEmpty()) {
+                String nextVal = priorityQueue.peek().getCurrentValue();
+                while (firstAttribute.nextValue() && !firstAttribute.isFinished()) {
+                    if (firstAttribute.getCurrentValue().compareTo(nextVal) >= 0) {
+                        priorityQueue.add(firstAttribute);
+                        break;
+                    }
+                }
+            } else {
+
+                for (int topAttribute : topAttributes.keySet()) {
+                    final Attribute attribute = attributeIndex[topAttribute];
+                    if (attribute.nextValue() && !attribute.isFinished()) {
+                        priorityQueue.add(attribute);
+                    }
                 }
             }
 
