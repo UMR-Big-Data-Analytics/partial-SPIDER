@@ -9,17 +9,14 @@ import runner.Config;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 public class RelationalFileInput {
 
     protected static final String DEFAULT_HEADER_STRING = "column";
-    public List<String> headerLine;
+    public String[] headerLine;
     public int tableOffset;
     protected CSVReader CSVReader;
-    protected List<String> nextLine;
+    protected String[] nextLine;
     protected String relationName;
     protected int numberOfColumns = 0;
     // Initialized to -1 because of lookahead
@@ -28,7 +25,6 @@ public class RelationalFileInput {
 
     protected boolean hasHeader;
     protected boolean skipDifferingLines;
-    private final boolean tailingSeparator;
     protected String nullValue;
 
 
@@ -44,11 +40,10 @@ public class RelationalFileInput {
 
         this.CSVReader = new CSVReaderBuilder(reader).withCSVParser(new CSVParserBuilder().withSeparator(config.separator).withEscapeChar(config.fileEscape).withIgnoreLeadingWhiteSpace(config.ignoreLeadingWhiteSpace).withStrictQuotes(config.strictQuotes).withQuoteChar(config.quoteChar).build()).build();
 
-        this.tailingSeparator = config.tailingSeparator;
         // read the first line
         this.nextLine = readNextLine();
         if (this.nextLine != null) {
-            this.numberOfColumns = this.nextLine.size();
+            this.numberOfColumns = this.nextLine.length;
         }
 
         if (hasHeader) {
@@ -66,8 +61,8 @@ public class RelationalFileInput {
         return !(this.nextLine == null);
     }
 
-    public List<String> next() throws IOException {
-        List<String> currentLine = this.nextLine;
+    public String[] next() throws IOException {
+        String[] currentLine = this.nextLine;
 
         if (currentLine == null) {
             return null;
@@ -83,8 +78,8 @@ public class RelationalFileInput {
         return currentLine;
     }
 
-    protected void failDifferingLine(List<String> currentLine) throws IOException {
-        if (currentLine.size() != this.numberOfColumns()) {
+    protected void failDifferingLine(String[] currentLine) throws IOException {
+        if (currentLine.length != this.numberOfColumns()) {
             throw new IOException("");
         }
     }
@@ -94,7 +89,7 @@ public class RelationalFileInput {
             return;
         }
 
-        while (this.nextLine.size() != this.numberOfColumns()) {
+        while (this.nextLine.length != this.numberOfColumns()) {
             this.nextLine = readNextLine();
             this.numberOfSkippedLines++;
             if (!hasNext()) {
@@ -103,15 +98,15 @@ public class RelationalFileInput {
         }
     }
 
-    protected List<String> generateHeaderLine() {
-        List<String> headerList = new ArrayList<>();
+    protected String[] generateHeaderLine() {
+        String[] headerList = new String[numberOfColumns];
         for (int i = 1; i <= this.numberOfColumns; i++) {
-            headerList.add(DEFAULT_HEADER_STRING + i);
+            headerList[i-1] = DEFAULT_HEADER_STRING + i;
         }
-        return Collections.unmodifiableList(headerList);
+        return headerList;
     }
 
-    protected List<String> readNextLine() {
+    protected String[] readNextLine() {
         String[] lineArray = null;
         try {
             lineArray = this.CSVReader.readNext();
@@ -123,17 +118,12 @@ public class RelationalFileInput {
             return null;
         }
         // Convert empty Strings to null
-        List<String> list = new ArrayList<>();
-        for (String val : lineArray) {
-            if (val.equals(this.nullValue)) {
-                list.add(null);
-            } else {
-                list.add(val);
+        for (int i = 0; i < lineArray.length; i++) {
+            if (lineArray[i].equals(this.nullValue)) {
+                lineArray[i] = null;
             }
         }
-        if (tailingSeparator) list.remove(list.size()-1);
-        // Return an immutable list
-        return Collections.unmodifiableList(list);
+        return lineArray;
     }
 
     public void close() throws IOException {
@@ -142,14 +132,6 @@ public class RelationalFileInput {
 
     public int numberOfColumns() {
         return numberOfColumns;
-    }
-
-    public String relationName() {
-        return relationName;
-    }
-
-    public List<String> columnNames() {
-        return headerLine;
     }
 
 }

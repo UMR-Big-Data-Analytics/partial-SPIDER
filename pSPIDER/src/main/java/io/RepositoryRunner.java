@@ -45,7 +45,7 @@ public class RepositoryRunner extends Thread {
                     table.tableOffset + i,
                     paths[i],
                     table.relationName,
-                    table.headerLine.get(i)
+                    table.headerLine[i]
             );
         }
     }
@@ -54,9 +54,9 @@ public class RepositoryRunner extends Thread {
         long tableSize = 0L;
         while (table.hasNext()) {
             tableSize++;
-            final List<String> next = table.next();
+            final String[] next = table.next();
             for (int index = 0; index < writers.length; index++) {
-                final String value = index >= next.size() ? null : next.get(index);
+                final String value = index >= next.length ? null : next[index];
                 if (value != null) {
                     writers[index].write(escape(value));
                     writers[index].newLine();
