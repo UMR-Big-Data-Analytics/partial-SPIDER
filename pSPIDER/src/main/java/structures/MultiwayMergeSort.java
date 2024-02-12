@@ -101,7 +101,7 @@ public class MultiwayMergeSort {
     }
 
     private void write(Path path, Map<String, Long> values) throws IOException {
-        BufferedWriter writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE);
+        BufferedWriter writer = Files.newBufferedWriter(path, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
         Iterator<Long> valueIterator = values.values().iterator();
         for (String key : values.keySet()) {
