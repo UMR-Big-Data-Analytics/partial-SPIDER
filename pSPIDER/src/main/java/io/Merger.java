@@ -40,7 +40,7 @@ public class Merger {
 
         while (!this.headValues.isEmpty()) {
             Entry current = this.headValues.poll();
-            if (previousValue != null && !previousValue.equals(current.getValue())) {
+            if (previousValue != null && !current.getValue().equals(previousValue)) {
                 writeValue(attribute, output, previousValue, occurrence);
                 occurrence = 0L;
             }
@@ -52,6 +52,10 @@ public class Merger {
                 updateHeadValues(current, nextValue);
             }
         }
+        // save the last value
+        writeValue(attribute, output, previousValue, occurrence);
+
+        // flush and close all outputs
         output.flush();
         output.close();
         closeReaders();
