@@ -26,6 +26,7 @@ public class RelationalFileInput {
     protected boolean hasHeader;
     protected boolean skipDifferingLines;
     protected String nullValue;
+    private final Config.NullHandling nullHandling;
 
 
     public RelationalFileInput(String relationName, String relationPath, Config config, int tableOffset) throws IOException {
@@ -35,6 +36,8 @@ public class RelationalFileInput {
         this.hasHeader = config.inputFileHasHeader;
         this.skipDifferingLines = config.inputFileSkipDifferingLines;
         this.nullValue = config.inputFileNullString;
+
+        this.nullHandling = config.nullHandling;
 
         BufferedReader reader = new BufferedReader(new FileReader(relationPath));
 
@@ -118,9 +121,11 @@ public class RelationalFileInput {
             return null;
         }
         // Convert empty Strings to null
-        for (int i = 0; i < lineArray.length; i++) {
-            if (lineArray[i].equals(this.nullValue)) {
-                lineArray[i] = null;
+        if (nullHandling != Config.NullHandling.EQUALITY) {
+            for (int i = 0; i < lineArray.length; i++) {
+                if (lineArray[i].equals(this.nullValue)) {
+                    lineArray[i] = null;
+                }
             }
         }
         return lineArray;

@@ -35,7 +35,7 @@ public class MultiwayMergeSort {
         this.valuesSinceLastMemoryCheck = 0;
         this.origin = attribute.getPath();
         this.memoryCheckFrequency = config.memoryCheckFrequency;
-        this.maxMemoryUsage = getMaxMemoryUsage(config.maxMemoryPercent);
+        this.maxMemoryUsage = getMaxMemoryUsage(config.maxMemory);
         this.logger = LoggerFactory.getLogger(MultiwayMergeSort.class);
         this.stringLimit = stringLimit;
     }

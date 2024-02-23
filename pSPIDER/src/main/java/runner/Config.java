@@ -27,15 +27,17 @@ public class Config {
 
     public int numThreads = 6;
 
-    public DuplicateHandling duplicateHandling = DuplicateHandling.AWARE;
-    public NullHandling nullHandling = NullHandling.SUBSET;
+    public DuplicateHandling duplicateHandling;
+    public NullHandling nullHandling;
 
-    public int maxMemoryPercent = 80;
+    public int maxMemory = 100_000;
     public int memoryCheckFrequency = 100_000;
 
-    public Config(Config.Dataset dataset, double threshold) {
+    public Config(Config.Dataset dataset, double threshold, NullHandling nullHandling, DuplicateHandling duplicateHandling) {
         this.setDataset(dataset);
         this.threshold = threshold;
+        this.duplicateHandling = duplicateHandling;
+        this.nullHandling = nullHandling;
     }
 
     private void setDataset(Config.Dataset dataset) {

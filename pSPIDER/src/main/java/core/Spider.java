@@ -103,10 +103,9 @@ public class Spider {
         System.gc();
         MemoryUsage memoryUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
         long available = memoryUsage.getMax() - memoryUsage.getUsed();
-        // we estimate 100 Bytes per String
-        long threadStringLimit = (available / config.numThreads) / 400;
-
-        System.out.println(threadStringLimit);
+        // we estimate 400 Bytes per String including overhead
+        long threadStringLimit = available / (config.numThreads*400L);
+        config.maxMemory = (int) threadStringLimit;
 
         MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[config.numThreads];
         for (int i = 0; i < config.numThreads; i++) {
@@ -205,7 +204,7 @@ public class Spider {
             }
 
             for (int topAttribute : topAttributes.keySet()) {
-                attributeIndex[topAttribute].intersectReferenced(topAttributes.keySet(), attributeIndex);
+                attributeIndex[topAttribute].intersectReferenced(topAttributes.keySet(), attributeIndex, config);
             }
 
             if (topAttributes.size() == 1 && !priorityQueue.isEmpty()) {
