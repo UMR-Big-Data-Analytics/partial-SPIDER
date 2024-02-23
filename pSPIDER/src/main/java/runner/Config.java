@@ -31,7 +31,6 @@ public class Config {
     public NullHandling nullHandling;
 
     public int maxMemory = 100_000;
-    public int memoryCheckFrequency = 100_000;
 
     public Config(Config.Dataset dataset, double threshold, NullHandling nullHandling, DuplicateHandling duplicateHandling) {
         this.setDataset(dataset);

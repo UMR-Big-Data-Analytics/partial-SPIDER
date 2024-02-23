@@ -14,16 +14,14 @@ public class MultiMergeRunner extends Thread {
 
     private final Config config;
     private final Queue<Attribute> attributeQueue;
-    private final long stringLimit;
 
     /**
      * @param attributeQueue A Queue of attributes which still need to be processed
      * @param config         The configuration that should be used for the MultiwayMergeSort execution
      */
-    public MultiMergeRunner(Queue<Attribute> attributeQueue, Config config, long stingLimit) {
+    public MultiMergeRunner(Queue<Attribute> attributeQueue, Config config) {
         this.attributeQueue = attributeQueue;
         this.config = config;
-        this.stringLimit = stingLimit;
     }
 
     /**

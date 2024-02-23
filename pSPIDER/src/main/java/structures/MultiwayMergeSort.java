@@ -8,41 +8,30 @@ import runner.Config;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class MultiwayMergeSort {
 
     private final Path origin;
-    private final long maxMemoryUsage;
     private final Map<String, Long> values;
     private final List<Path> spilledFiles;
-    private final int memoryCheckFrequency;
     private final Logger logger;
     private final Attribute attribute;
-    private final int stringLimit;
-    private int valuesSinceLastMemoryCheck;
+    private final int maxMapSize;
+    private int valuesSinceLastSpill;
 
     public MultiwayMergeSort(Config config, Attribute attribute, int stringLimit) {
         this.values = new HashMap<>((int) (stringLimit*1.05));
         this.attribute = attribute;
         this.spilledFiles = new ArrayList<>();
-        this.valuesSinceLastMemoryCheck = 0;
+        this.valuesSinceLastSpill = 0;
         this.origin = attribute.getPath();
-        this.memoryCheckFrequency = config.memoryCheckFrequency;
-        this.maxMemoryUsage = getMaxMemoryUsage(config.maxMemory);
         this.logger = LoggerFactory.getLogger(MultiwayMergeSort.class);
-        this.stringLimit = stringLimit;
-    }
-
-    private static long getMaxMemoryUsage(int maxMemoryPercent) {
-        long available = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
-        return (long) ((double) available * ((double) maxMemoryPercent / 100.0D));
+        this.maxMapSize = config.maxMemory;
     }
 
     public void sort() throws IOException {
@@ -82,9 +71,9 @@ public class MultiwayMergeSort {
 
 
     private void maybeWriteSpillFile() throws IOException {
-        ++this.valuesSinceLastMemoryCheck;
-        if (this.valuesSinceLastMemoryCheck > this.stringLimit) {
-            this.valuesSinceLastMemoryCheck = 0;
+        ++this.valuesSinceLastSpill;
+        if (this.valuesSinceLastSpill > this.maxMapSize) {
+            this.valuesSinceLastSpill = 0;
             this.writeSpillFile();
         }
 

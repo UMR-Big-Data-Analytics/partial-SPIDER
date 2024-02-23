@@ -109,7 +109,7 @@ public class Spider {
 
         MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[config.numThreads];
         for (int i = 0; i < config.numThreads; i++) {
-            multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config, threadStringLimit);
+            multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config);
             multiMergeRunners[i].start();
         }
         for (int i = 0; i < config.numThreads; i++) {
