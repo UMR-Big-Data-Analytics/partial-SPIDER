@@ -35,8 +35,11 @@ public class MultiwayMergeSort {
     }
 
     public void sort() throws IOException {
-        logger.info("Starting sort for: " + attribute.getId());
+        logger.debug("Starting sort for: " + attribute.getId());
         long sTime = System.currentTimeMillis();
+
+        // one file is created when merging
+        attribute.spilledFiles = 1;
 
         this.writeSpillFiles();
         if (this.spilledFiles.isEmpty()) {
@@ -50,10 +53,10 @@ public class MultiwayMergeSort {
             spilledMerger.merge(this.spilledFiles, this.origin, attribute);
         }
 
-        attribute.spilledFiles = spilledFiles.size();
+        attribute.spilledFiles += spilledFiles.size();
         this.removeSpillFiles();
 
-        logger.info("Finished sort for: " + attribute.getId() + ". Took: " + (System.currentTimeMillis() - sTime));
+        logger.debug("Finished sort for: " + attribute.getId() + ". Took: " + (System.currentTimeMillis() - sTime));
     }
 
     private void writeSpillFiles() throws IOException {

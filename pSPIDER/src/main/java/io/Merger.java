@@ -38,7 +38,7 @@ public class Merger {
 
         String previousValue = null;
         long occurrence = 0L;
-        Entry current = null;
+        Entry current;
 
         while (!this.headValues.isEmpty()) {
             current = this.headValues.poll();
