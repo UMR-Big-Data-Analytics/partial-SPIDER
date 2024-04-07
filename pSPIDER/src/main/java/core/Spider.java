@@ -1,6 +1,5 @@
 package core;
 
-import io.MultiMergeRunner;
 import io.RelationalFileInput;
 import io.RepositoryRunner;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
@@ -9,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import runner.Config;
 import structures.Attribute;
+import structures.MultiwayMergeSort;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -97,7 +97,7 @@ public class Spider {
         logger.info("Finished creating attribute Files. Took: " + (System.currentTimeMillis() - sTime) + "ms");
     }
 
-    private void enqueueAttributes() throws InterruptedException, IOException {
+    private void enqueueAttributes() throws IOException {
 
         Queue<Attribute> attributeQueue = Arrays.stream(attributeIndex).sorted(Attribute::compareBySize).collect(Collectors.toCollection(ArrayDeque::new));
         System.gc();
@@ -107,14 +107,16 @@ public class Spider {
         long threadStringLimit = available / (config.numThreads*400L);
         config.maxMemory = (int) threadStringLimit;
 
-        MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[config.numThreads];
-        for (int i = 0; i < config.numThreads; i++) {
-            multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config);
-            multiMergeRunners[i].start();
-        }
-        for (int i = 0; i < config.numThreads; i++) {
-            multiMergeRunners[i].join();
-        }
+        attributeQueue.parallelStream().forEach(attribute -> {
+            int maxSize = (int) Math.min(attribute.getSize(), config.maxMemory);
+            MultiwayMergeSort multiwayMergeSort = new MultiwayMergeSort(config, attribute, maxSize);
+            try {
+                multiwayMergeSort.sort();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            attribute.calculateViolations(config);
+        });
 
         for (final Attribute attribute : attributeIndex) {
             attribute.open();
@@ -255,7 +257,7 @@ public class Spider {
         bw.close();
 
         // TODO: log num spills
-        bw = new BufferedWriter(new FileWriter(".\\results\\" + config.executionName + "_statistics.json"));
+        bw = new BufferedWriter(new FileWriter(".\\results\\" + config.executionName + "_" + (System.currentTimeMillis()/1000) + ".json"));
         // build a json file
         bw.write('{');
         bw.write("\"database\": \"" + config.databaseName + "\",");
@@ -268,7 +270,8 @@ public class Spider {
         bw.write("\"enqueue\": " + enqueue + ",");
         bw.write("\"pINDCreation\": " + pINDCreation + ",");
         bw.write("\"pINDValidation\": " + pINDValidation + ",");
-        bw.write("\"spilledFiles\": " + Arrays.stream(attributeIndex).mapToInt(Attribute::getSpilledFiles).sum());
+        // the total of spilled files + the copied attribute file
+        bw.write("\"spilledFiles\": " + (Arrays.stream(attributeIndex).mapToInt(Attribute::getSpilledFiles).sum() + attributeIndex.length));
         bw.write('}');
         bw.flush();
         bw.close();
