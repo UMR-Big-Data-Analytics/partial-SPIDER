@@ -8,6 +8,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.PriorityQueue;
 
@@ -33,14 +34,15 @@ public class Merger {
 
     public void merge(List<Path> files, Path to, Attribute attribute) throws IOException {
         this.init(files);
-        BufferedWriter output = Files.newBufferedWriter(to);
+        BufferedWriter output = Files.newBufferedWriter(to, StandardOpenOption.TRUNCATE_EXISTING);
 
         String previousValue = null;
         long occurrence = 0L;
+        Entry current;
 
         while (!this.headValues.isEmpty()) {
-            Entry current = this.headValues.poll();
-            if (previousValue != null && !previousValue.equals(current.getValue())) {
+            current = this.headValues.poll();
+            if (previousValue != null && !current.getValue().equals(previousValue)) {
                 writeValue(attribute, output, previousValue, occurrence);
                 occurrence = 0L;
             }
@@ -52,6 +54,10 @@ public class Merger {
                 updateHeadValues(current, nextValue);
             }
         }
+        // save the last value
+        writeValue(attribute, output, previousValue, occurrence);
+
+        // flush and close all outputs
         output.flush();
         output.close();
         closeReaders();

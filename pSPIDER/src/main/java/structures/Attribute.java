@@ -129,7 +129,7 @@ public class Attribute {
      * @param attributes     Set of attribute ids, which share some value
      * @param attributeIndex The index that stores all attributes
      */
-    public void intersectReferenced(Set<Integer> attributes, final Attribute[] attributeIndex) {
+    public void intersectReferenced(Set<Integer> attributes, final Attribute[] attributeIndex, Config config) {
         Iterator<Integer> referencedIterator = referenced.keySet().iterator();
         while (referencedIterator.hasNext()) {
             final int ref = referencedIterator.next();
@@ -137,9 +137,15 @@ public class Attribute {
                 continue;
             }
 
-            referenced.put(ref, referenced.get(ref) - currentOccurrences);
+            long updated_violations;
+            // v won't be null since we iterate the key set
+            if (config.duplicateHandling == Config.DuplicateHandling.UNAWARE) {
+                updated_violations = referenced.compute(ref, (k, v) -> v - currentOccurrences);
+            } else {
+                updated_violations = referenced.compute(ref, (k, v) -> v - 1);
+            }
 
-            if (referenced.get(ref) < 0L) {
+            if (updated_violations < 0L) {
                 referencedIterator.remove();
                 attributeIndex[ref].removeDependent(id);
             }

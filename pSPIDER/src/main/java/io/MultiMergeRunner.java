@@ -31,7 +31,8 @@ public class MultiMergeRunner extends Thread {
         while (!attributeQueue.isEmpty()) {
             Attribute attribute = attributeQueue.poll();
             if (attribute == null) continue;
-            MultiwayMergeSort multiwayMergeSort = new MultiwayMergeSort(config, attribute);
+            int maxSize = (int) Math.min(attribute.getSize(), config.maxMemory);
+            MultiwayMergeSort multiwayMergeSort = new MultiwayMergeSort(config, attribute, maxSize);
             try {
                 multiwayMergeSort.sort();
             } catch (IOException e) {

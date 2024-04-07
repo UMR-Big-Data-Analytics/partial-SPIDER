@@ -1,20 +1,20 @@
 package core;
 
-import io.MultiMergeRunner;
 import io.RelationalFileInput;
 import io.RepositoryRunner;
-import it.unimi.dsi.fastutil.PriorityQueue;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import runner.Config;
 import structures.Attribute;
+import structures.MultiwayMergeSort;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryUsage;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -70,7 +70,7 @@ public class Spider {
         int numAttributes = getTotalColumnCount(tables);
         logger.info("Found " + numAttributes + " attributes");
         attributeIndex = new Attribute[numAttributes];
-        priorityQueue = new ObjectHeapPriorityQueue<>(numAttributes, this::compareAttributes);
+        priorityQueue = new PriorityQueue<>(numAttributes, this::compareAttributes);
 
         logger.info("Finished Initializing Attributes. Took: " + (System.currentTimeMillis() - sTime) + "ms");
     }
@@ -97,22 +97,31 @@ public class Spider {
         logger.info("Finished creating attribute Files. Took: " + (System.currentTimeMillis() - sTime) + "ms");
     }
 
-    private void enqueueAttributes() throws InterruptedException, IOException {
+    private void enqueueAttributes() throws IOException {
 
         Queue<Attribute> attributeQueue = Arrays.stream(attributeIndex).sorted(Attribute::compareBySize).collect(Collectors.toCollection(ArrayDeque::new));
-        MultiMergeRunner[] multiMergeRunners = new MultiMergeRunner[config.numThreads];
-        for (int i = 0; i < config.numThreads; i++) {
-            multiMergeRunners[i] = new MultiMergeRunner(attributeQueue, config);
-            multiMergeRunners[i].start();
-        }
-        for (int i = 0; i < config.numThreads; i++) {
-            multiMergeRunners[i].join();
-        }
+        System.gc();
+        MemoryUsage memoryUsage = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
+        long available = memoryUsage.getMax() - memoryUsage.getUsed();
+        // we estimate 400 Bytes per String including overhead
+        long threadStringLimit = available / (config.numThreads*400L);
+        config.maxMemory = (int) threadStringLimit;
+
+        attributeQueue.parallelStream().forEach(attribute -> {
+            int maxSize = (int) Math.min(attribute.getSize(), config.maxMemory);
+            MultiwayMergeSort multiwayMergeSort = new MultiwayMergeSort(config, attribute, maxSize);
+            try {
+                multiwayMergeSort.sort();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            attribute.calculateViolations(config);
+        });
 
         for (final Attribute attribute : attributeIndex) {
             attribute.open();
             if (attribute.getReadPointer().hasNext()) {
-                priorityQueue.enqueue(attribute);
+                priorityQueue.add(attribute);
             } else {
                 // The attribute is null in every entry
                 // Equality will never get here, since null is considered a value
@@ -168,7 +177,7 @@ public class Spider {
 
     private int compareAttributes(final Attribute a1, final Attribute a2) {
         if (a1.getCurrentValue() == null && a2.getCurrentValue() == null) {
-            return Integer.compare(a1.getId(), a2.getId());
+            return 0;
         }
 
         if (a1.getCurrentValue() == null) {
@@ -179,11 +188,7 @@ public class Spider {
             return -1;
         }
 
-        final int order = a1.getCurrentValue().compareTo(a2.getCurrentValue());
-        if (order == 0) {
-            return Integer.compare(a1.getId(), a2.getId());
-        }
-        return order;
+        return a1.getCurrentValue().compareTo(a2.getCurrentValue());
     }
 
     private void calculateInclusionDependencies() {
@@ -193,21 +198,32 @@ public class Spider {
         Map<Integer, Long> topAttributes = new HashMap<>();
         while (!priorityQueue.isEmpty()) {
 
-            final Attribute firstAttribute = priorityQueue.dequeue();
+            final Attribute firstAttribute = priorityQueue.poll();
             topAttributes.put(firstAttribute.getId(), firstAttribute.getCurrentOccurrences());
-            while (!priorityQueue.isEmpty() && priorityQueue.first().equals(firstAttribute)) {
-                Attribute sameGroupAttribute = priorityQueue.dequeue();
+            while (!priorityQueue.isEmpty() && priorityQueue.peek().equals(firstAttribute)) {
+                Attribute sameGroupAttribute = priorityQueue.poll();
                 topAttributes.put(sameGroupAttribute.getId(), sameGroupAttribute.getCurrentOccurrences());
             }
 
             for (int topAttribute : topAttributes.keySet()) {
-                attributeIndex[topAttribute].intersectReferenced(topAttributes.keySet(), attributeIndex);
+                attributeIndex[topAttribute].intersectReferenced(topAttributes.keySet(), attributeIndex, config);
             }
 
-            for (int topAttribute : topAttributes.keySet()) {
-                final Attribute attribute = attributeIndex[topAttribute];
-                if (attribute.nextValue() && !attribute.isFinished()) {
-                    priorityQueue.enqueue(attribute);
+            if (topAttributes.size() == 1 && !priorityQueue.isEmpty()) {
+                String nextVal = priorityQueue.peek().getCurrentValue();
+                while (firstAttribute.nextValue() && !firstAttribute.isFinished()) {
+                    if (firstAttribute.getCurrentValue().compareTo(nextVal) >= 0) {
+                        priorityQueue.add(firstAttribute);
+                        break;
+                    }
+                }
+            } else {
+
+                for (int topAttribute : topAttributes.keySet()) {
+                    final Attribute attribute = attributeIndex[topAttribute];
+                    if (attribute.nextValue() && !attribute.isFinished()) {
+                        priorityQueue.add(attribute);
+                    }
                 }
             }
 
@@ -241,7 +257,7 @@ public class Spider {
         bw.close();
 
         // TODO: log num spills
-        bw = new BufferedWriter(new FileWriter(".\\results\\" + config.executionName + "_statistics.json"));
+        bw = new BufferedWriter(new FileWriter(".\\results\\" + config.executionName + "_" + (System.currentTimeMillis()/1000) + ".json"));
         // build a json file
         bw.write('{');
         bw.write("\"database\": \"" + config.databaseName + "\",");
@@ -254,7 +270,8 @@ public class Spider {
         bw.write("\"enqueue\": " + enqueue + ",");
         bw.write("\"pINDCreation\": " + pINDCreation + ",");
         bw.write("\"pINDValidation\": " + pINDValidation + ",");
-        bw.write("\"spilledFiles\": " + Arrays.stream(attributeIndex).mapToInt(Attribute::getSpilledFiles).sum());
+        // the total of spilled files + the copied attribute file
+        bw.write("\"spilledFiles\": " + (Arrays.stream(attributeIndex).mapToInt(Attribute::getSpilledFiles).sum() + attributeIndex.length));
         bw.write('}');
         bw.flush();
         bw.close();
