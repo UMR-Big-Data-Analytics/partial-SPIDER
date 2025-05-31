@@ -1,4 +1,4 @@
-### 🧠 Partial SPIDER – Single Pass Inclusion DEpendency Recognition
+# 🧠 Partial SPIDER – Single Pass Inclusion DEpendency Recognition
 
 The `pSPIDER` algorithm builds on the [Spider algorithm](https://hpi.de/fileadmin/user_upload/fachgebiete/naumann/publications/PDFs/2007_bauckmann_efficiently.pdf), extending it to support **partial** IND discovery.  
 
